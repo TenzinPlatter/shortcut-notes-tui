@@ -5,74 +5,43 @@ use ratatui::{
     style::{Style, Stylize},
     symbols::border,
     text::{Line, Text},
-    widgets::{Block, Paragraph, Widget},
+    widgets::{Block, Paragraph, Widget, WidgetRef},
 };
 
-use crate::keys::AppKey;
-
-pub trait Selectable {
-    fn is_selected(&self) -> bool;
-    fn select(&mut self);
-    fn unselect(&mut self);
-}
+use crate::{
+    block::Selectable,
+    keys::{AppKey, KeyHandler},
+};
 
 #[derive(Default, Debug)]
 pub struct CounterBlock {
-    selected: bool,
+    is_selected: bool,
     counter: u8,
     err_msg: Option<String>,
 }
 
-impl CounterBlock {
-    pub fn handle_key_event(&mut self, event: &KeyEvent) {
-        match event.code.into() {
-            AppKey::Up => {
-                if self.counter == 9 {
-                    self.err_msg = Some("Can't go to double digits".into());
-                } else {
-                    self.counter += 1;
-                    self.err_msg = None;
-                }
-            }
-
-            AppKey::Down => {
-                if self.counter == 0 {
-                    self.err_msg = Some("Can't go below zero".into());
-                } else {
-                    self.counter -= 1;
-                    self.err_msg = None;
-                }
-            }
-            _ => {}
-        }
-    }
-}
-
 impl Selectable for CounterBlock {
     fn is_selected(&self) -> bool {
-        self.selected
+        self.is_selected
     }
 
     fn select(&mut self) {
-        self.selected = true;
+        self.is_selected = true;
     }
 
     fn unselect(&mut self) {
-        self.selected = false;
+        self.is_selected = false;
     }
 }
 
-impl Widget for CounterBlock {
-    fn render(self, area: Rect, buf: &mut Buffer)
-    where
-        Self: Sized,
-    {
+impl WidgetRef for CounterBlock {
+    fn render_ref(&self, area: Rect, buf: &mut Buffer) {
         let title = Line::from(" Counter App Tutorial ".bold());
 
         let block = Block::bordered()
             .title(title.centered())
             .border_set(border::THICK)
-            .border_style(if self.selected {
+            .border_style(if self.is_selected {
                 Style::default().fg(ratatui::style::Color::Yellow)
             } else {
                 Style::default()
@@ -96,5 +65,30 @@ impl Widget for CounterBlock {
             .centered()
             .block(block)
             .render(area, buf);
+    }
+}
+
+impl KeyHandler for CounterBlock {
+    fn handle_key_event(&mut self, event: KeyEvent) {
+        match event.code.into() {
+            AppKey::Up => {
+                if self.counter == 9 {
+                    self.err_msg = Some("Can't go to double digits".into());
+                } else {
+                    self.counter += 1;
+                    self.err_msg = None;
+                }
+            }
+
+            AppKey::Down => {
+                if self.counter == 0 {
+                    self.err_msg = Some("Can't go below zero".into());
+                } else {
+                    self.counter -= 1;
+                    self.err_msg = None;
+                }
+            }
+            _ => {}
+        }
     }
 }

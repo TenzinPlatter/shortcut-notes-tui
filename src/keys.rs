@@ -1,6 +1,10 @@
 use std::fmt::Display;
 
-use crossterm::event::KeyCode;
+use crossterm::event::{KeyCode, KeyEvent};
+
+pub trait KeyHandler {
+    fn handle_key_event(&mut self, key_event: KeyEvent);
+}
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum AppKey {
@@ -23,6 +27,7 @@ impl AppKey {
     }
 }
 
+// TODO: make this try_from
 impl From<KeyCode> for AppKey {
     fn from(key_code: KeyCode) -> Self {
         match key_code {
