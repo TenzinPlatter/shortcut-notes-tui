@@ -69,26 +69,33 @@ impl WidgetRef for CounterBlock {
 }
 
 impl KeyHandler for CounterBlock {
-    fn handle_key_event(&mut self, event: KeyEvent) {
-        match event.code.into() {
-            AppKey::Up => {
+    fn handle_key_event(&mut self, event: KeyEvent) -> bool {
+        let mut consumed = false;
+
+        match event.code.try_into() {
+            Ok(AppKey::Up) => {
                 if self.counter == 9 {
                     self.err_msg = Some("Can't go to double digits".into());
                 } else {
                     self.counter += 1;
                     self.err_msg = None;
                 }
+                consumed = true;
             }
 
-            AppKey::Down => {
+            Ok(AppKey::Down) => {
                 if self.counter == 0 {
                     self.err_msg = Some("Can't go below zero".into());
                 } else {
                     self.counter -= 1;
                     self.err_msg = None;
                 }
+                consumed = true;
             }
+            
             _ => {}
-        }
+        };
+
+        consumed
     }
 }

@@ -3,7 +3,9 @@ use std::fmt::Display;
 use crossterm::event::{KeyCode, KeyEvent};
 
 pub trait KeyHandler {
-    fn handle_key_event(&mut self, key_event: KeyEvent);
+    /// Handle a key event. Returns whether the event was consumed by the handler, i.e. whether
+    /// further processing should be stopped.
+    fn handle_key_event(&mut self, key_event: KeyEvent) -> bool;
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -28,15 +30,17 @@ impl AppKey {
 }
 
 // TODO: make this try_from
-impl From<KeyCode> for AppKey {
-    fn from(key_code: KeyCode) -> Self {
+impl TryFrom<KeyCode> for AppKey {
+    type Error = ();
+
+    fn try_from(key_code: KeyCode) -> Result<Self, Self::Error> {
         match key_code {
-            KeyCode::Char('h') => AppKey::Left,
-            KeyCode::Char('l') => AppKey::Right,
-            KeyCode::Char('k') => AppKey::Up,
-            KeyCode::Char('j') => AppKey::Down,
-            KeyCode::Char('q') => AppKey::Quit,
-            _ => panic!("Unsupported key code for AppKey"),
+            KeyCode::Char('h') => Ok(AppKey::Left),
+            KeyCode::Char('l') => Ok(AppKey::Right),
+            KeyCode::Char('k') => Ok(AppKey::Up),
+            KeyCode::Char('j') => Ok(AppKey::Down),
+            KeyCode::Char('q') => Ok(AppKey::Quit),
+            _ => Err(()),
         }
     }
 }

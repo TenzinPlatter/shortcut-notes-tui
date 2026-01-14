@@ -57,12 +57,12 @@ impl Selectable for View {
 }
 
 impl KeyHandler for View {
-    fn handle_key_event(&mut self, key_event: crossterm::event::KeyEvent) {
+    fn handle_key_event(&mut self, key_event: crossterm::event::KeyEvent) -> bool {
         let consume_navigation = self.sections.len() > 1;
 
         // if we have more than one section we want to consume any navigation keys
-        match key_event.code.into() {
-            AppKey::Left if consume_navigation => {
+        match key_event.code.try_into() {
+            Ok(AppKey::Left) if consume_navigation => {
                 let new = if self.selected_section > 0 {
                     self.selected_section - 1
                 } else {
@@ -73,7 +73,7 @@ impl KeyHandler for View {
                 self.select_section(new);
             }
 
-            AppKey::Right if consume_navigation => {
+            Ok(AppKey::Right) if consume_navigation => {
                 let new = if self.selected_section < u8::MAX.into() {
                     (self.selected_section + 1) % self.sections.len()
                 } else {
@@ -86,10 +86,14 @@ impl KeyHandler for View {
 
             _ => {
                 for (section, _) in self.sections.iter_mut() {
-                    section.handle_key_event(key_event);
+                    if section.handle_key_event(key_event) {
+                        return true;
+                    }
                 }
             }
-        }
+        };
+
+        consume_navigation
     }
 }
 

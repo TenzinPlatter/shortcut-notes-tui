@@ -72,7 +72,8 @@ impl WidgetRef for ParagraphBlock {
 }
 
 impl KeyHandler for ParagraphBlock {
-    fn handle_key_event(&mut self, _key_event: crossterm::event::KeyEvent) {
+    fn handle_key_event(&mut self, _key_event: crossterm::event::KeyEvent) -> bool {
+        false
         // nada
     }
 }
