@@ -13,7 +13,7 @@ fn main() -> anyhow::Result<()> {
         .build();
 
     let instructions = ViewBuilder::default()
-        .add_non_selectable(ParagraphBlock::default())
+        .add_non_selectable(ParagraphBlock::instructions())
         .build();
 
     let view = ViewBuilder::default()

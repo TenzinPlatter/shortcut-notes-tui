@@ -17,8 +17,8 @@ pub struct ParagraphBlock {
     is_selected: bool,
 }
 
-impl Default for ParagraphBlock {
-    fn default() -> Self {
+impl ParagraphBlock {
+    pub fn instructions() -> Self {
         // returns static lifetime as the &str.into() calls wrap a Span<'a> around the &str's lifetime
         // which is 'static
         let counter_instructions = Line::from(vec![
@@ -71,12 +71,7 @@ impl WidgetRef for ParagraphBlock {
     }
 }
 
-impl KeyHandler for ParagraphBlock {
-    fn handle_key_event(&mut self, _key_event: crossterm::event::KeyEvent) -> bool {
-        false
-        // nada
-    }
-}
+impl KeyHandler for ParagraphBlock {}
 
 impl Selectable for ParagraphBlock {
     fn is_selected(&self) -> bool {

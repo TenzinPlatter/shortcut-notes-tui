@@ -5,7 +5,9 @@ use crossterm::event::{KeyCode, KeyEvent};
 pub trait KeyHandler {
     /// Handle a key event. Returns whether the event was consumed by the handler, i.e. whether
     /// further processing should be stopped.
-    fn handle_key_event(&mut self, key_event: KeyEvent) -> bool;
+    fn handle_key_event(&mut self, _key_event: KeyEvent) -> bool {
+        false
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
