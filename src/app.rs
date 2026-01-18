@@ -1,20 +1,28 @@
-use crossterm::event::{self, Event, KeyEventKind};
-use ratatui::{DefaultTerminal, Frame, buffer::Buffer, layout::Rect, widgets::WidgetRef};
+use core::error;
+
+use crossterm::event::{self, Event, KeyCode, KeyEventKind};
+use ratatui::{
+    DefaultTerminal, Frame,
+    buffer::Buffer,
+    layout::{Direction, Rect},
+    widgets::WidgetRef,
+};
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
 use crate::{
     api::{ApiClient, epic::Epic},
-    error_display::{ErrorExt, ErrorHandler, ErrorSeverity, Notification},
+    error_display::{self, AppError, ErrorExt, ErrorHandler, ErrorSeverity, Notification},
     get_api_key, get_user_id,
     keys::{AppKey, KeyHandler},
-    view::View,
+    pane::{ErrorPane, ParagraphPane},
+    view::{View, ViewBuilder},
 };
 
 /// Events sent from background tasks to the main app
 pub enum AppEvent {
     EpicsLoaded(Vec<Epic>),
-    EpicsFailed(anyhow::Error),
+    EpicsFailed(error_display::AppError),
 }
 
 pub struct App {
@@ -27,7 +35,7 @@ pub struct App {
 }
 
 impl App {
-    pub async fn init() -> anyhow::Result<Self> {
+    pub async fn init() -> error_display::Result<Self> {
         let api_key = get_api_key().await?;
         let user_id = get_user_id()
             .await?
@@ -66,9 +74,6 @@ impl App {
     }
 
     fn get_loading_view() -> View {
-        use crate::{pane::ParagraphPane, view::ViewBuilder};
-        use ratatui::layout::Direction;
-
         let loading_pane = ParagraphPane::loading();
         ViewBuilder::default()
             .add_non_selectable(loading_pane)
@@ -76,7 +81,7 @@ impl App {
             .build()
     }
 
-    pub async fn run(&mut self, terminal: &mut DefaultTerminal) -> anyhow::Result<()> {
+    pub async fn main_loop(&mut self, terminal: &mut DefaultTerminal) -> error_display::Result<()> {
         while !self.exit {
             terminal.draw(|frame| self.draw(frame))?;
             self.handle_events().await?; // blocks until an event occurs, thus only draw on change
@@ -108,7 +113,7 @@ impl App {
         }
     }
 
-    async fn handle_events(&mut self) -> anyhow::Result<()> {
+    async fn handle_events(&mut self) -> error_display::Result<()> {
         tokio::select! {
             terminal_event = tokio::task::spawn_blocking(event::read) => {
                 match terminal_event?? {
@@ -150,29 +155,21 @@ impl App {
     }
 
     fn create_epics_view(epics: Vec<Epic>) -> View {
-        use crate::{pane::ParagraphPane, view::ViewBuilder};
-
-        let panes: Vec<_> = epics.iter().map(|epic| ParagraphPane::epic(epic)).collect();
+        let panes: Vec<_> = epics.iter().map(ParagraphPane::epic).collect();
 
         ViewBuilder::default().add_panes(panes).build()
     }
 
-    pub fn show_notification(&mut self, error: anyhow::Error) {
+    pub fn show_notification(&mut self, error: error_display::AppError) {
         let (pane, _) = self.error_handler.handle(&error);
         self.notification = Some(Notification::new(pane));
     }
 
     pub fn show_blocking_error(
         terminal: &mut DefaultTerminal,
-        error_pane: crate::pane::ErrorPane,
-    ) -> anyhow::Result<()> {
-        use crate::view::ViewBuilder;
-        use ratatui::layout::Direction;
-
-        let view = ViewBuilder::default()
-            .add_non_selectable(error_pane)
-            .direction(Direction::Vertical)
-            .build();
+        mut error_pane: ErrorPane,
+    ) -> error_display::Result<()> {
+        let view = error_pane.as_view();
 
         // Draw once
         terminal.draw(|frame| {
@@ -185,23 +182,34 @@ impl App {
             if let Event::Key(key) = event::read()?
                 && key.kind == KeyEventKind::Press
             {
-                break;
+                if key.code == AppKey::ShowErrorDetails.into() {
+                    error_pane.toggle_details();
+                    let view = error_pane.as_view();
+                    terminal.draw(|frame| {
+                        let area = frame.area();
+                        view.render_ref(area, frame.buffer_mut())
+                    })?;
+                } else {
+                    // break on any other key
+                    break;
+                }
             }
         }
 
         Ok(())
     }
 
-    pub async fn run_with_error_handling(terminal: &mut DefaultTerminal) -> anyhow::Result<()> {
+    pub async fn run(terminal: &mut DefaultTerminal) -> error_display::Result<()> {
         match Self::init().await {
-            Ok(mut app) => app.run(terminal).await,
+            Ok(mut app) => app.main_loop(terminal).await,
             Err(e) => {
                 let error_handler = ErrorHandler;
                 let (error_pane, severity) = error_handler.handle(&e);
 
                 match severity {
                     ErrorSeverity::Blocking => {
-                        Self::show_blocking_error(terminal, error_pane)?;
+                        // Don't propagate errors from show_blocking_error - just try our best
+                        let _ = Self::show_blocking_error(terminal, error_pane);
                         Ok(()) // Exit gracefully after showing error
                     }
                     ErrorSeverity::Notification => {

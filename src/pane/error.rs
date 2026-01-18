@@ -1,24 +1,28 @@
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     buffer::Buffer,
-    layout::Rect,
+    layout::{Constraint, Rect},
     style::{Color, Style},
     symbols::border,
-    text::Text,
+    text::{Line, Text},
     widgets::{Block, Paragraph, Widget, WidgetRef},
 };
 
 use crate::{
-    error_display::ErrorSeverity, keys::KeyHandler, pane::Selectable,
+    error_display::ErrorSeverity,
+    keys::KeyHandler,
+    pane::{ParagraphPane, Selectable},
+    view::{View, ViewBuilder},
 };
 
+#[derive(Clone)]
 pub struct ErrorPane {
     title: String,
     message: String,
     details: Option<String>,
     severity: ErrorSeverity,
     is_selected: bool,
-    show_details: bool,
+    pub show_details: bool,
 }
 
 impl ErrorPane {
@@ -41,6 +45,46 @@ impl ErrorPane {
         self.details = Some(details.into());
         self
     }
+
+    pub fn details_pane(&self) -> Option<ParagraphPane> {
+        if let Some(details) = &self.details {
+            let lines = vec![Line::from(" Error Details: "), Line::from(details.clone())];
+            let paragraph = Paragraph::new(Text::from(lines))
+                .style(Style::default().fg(Color::Red))
+                .block(
+                    Block::bordered()
+                        .border_style(Style::default().fg(Color::Red))
+                        .border_set(border::THICK)
+                        .title(" Error details: ")
+                        .title_bottom(" Press 'd' to hide details "),
+                );
+
+            Some(ParagraphPane::from(paragraph))
+        } else {
+            None
+        }
+    }
+
+    pub fn toggle_details(&mut self) {
+        self.show_details = !self.show_details;
+    }
+
+    pub fn as_view(&self) -> View {
+        let builder = ViewBuilder::default().add_non_selectable(self.clone());
+
+        if self.show_details
+            && let Some(details_pane) = self.details_pane()
+        {
+            builder
+                .add_non_selectable_with_constraint(
+                    details_pane,
+                    ratatui::layout::Constraint::Percentage(70),
+                )
+                .build()
+        } else {
+            builder.build()
+        }
+    }
 }
 
 impl WidgetRef for ErrorPane {
@@ -50,22 +94,16 @@ impl WidgetRef for ErrorPane {
             ErrorSeverity::Notification => Color::Yellow,
         };
 
-        let text = if self.show_details {
-            self.details.as_ref().unwrap_or(&self.message)
-        } else {
-            &self.message
-        };
-
-        let paragraph = Paragraph::new(Text::from(text.as_str()))
-            .style(Style::default().fg(color));
+        let paragraph =
+            Paragraph::new(Text::from(self.message.as_str())).style(Style::default().fg(color));
 
         let mut block = Block::bordered()
             .title(format!(" {} ", self.title))
             .border_style(Style::default().fg(color))
             .border_set(border::THICK);
 
-        if self.details.is_some() {
-            block = block.title_bottom(" Press 'd' for details ");
+        if self.details.is_some() && !self.show_details {
+            block = block.title_bottom(" Press 'd' to show details ");
         }
 
         paragraph.block(block).centered().render(area, buf);

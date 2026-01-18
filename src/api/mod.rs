@@ -1,7 +1,8 @@
-use anyhow::Context;
 use reqwest::{Client, RequestBuilder, Response};
 use serde::Serialize;
 use uuid::Uuid;
+
+use crate::error_display;
 
 pub mod epic;
 
@@ -21,7 +22,7 @@ fn get_full_path(endpoint: &str) -> String {
 }
 
 impl ApiClient {
-    pub async fn get_with_body<Body>(&self, endpoint: &str, body: Body) -> anyhow::Result<Response>
+    pub async fn get_with_body<Body>(&self, endpoint: &str, body: Body) -> error_display::Result<Response>
     where
         Body: Serialize,
     {
@@ -30,15 +31,15 @@ impl ApiClient {
             .json(&body)
             .send()
             .await
-            .with_context(|| format!("Failed to send get request to {} with body", &full_path))
+            .map_err(|e| error_display::AppError::new(format!("{}", e)))
     }
 
-    pub async fn get(&self, endpoint: &str) -> anyhow::Result<Response> {
+    pub async fn get(&self, endpoint: &str) -> error_display::Result<Response> {
         let full_path = get_full_path(endpoint);
         self.get_request(&full_path)
             .send()
             .await
-            .with_context(|| format!("Failed to send get request to {}", &full_path))
+            .map_err(|e| error_display::AppError::new(format!("{}", e)))
     }
 
     fn get_request(&self, path: &str) -> RequestBuilder {

@@ -8,7 +8,9 @@ use ratatui::{
 };
 
 use crate::{
-    api::epic::Epic, pane::Selectable, keys::{AppKey, KeyHandler}
+    api::epic::Epic,
+    keys::{AppKey, KeyHandler},
+    pane::Selectable,
 };
 
 pub struct ParagraphPane {
@@ -24,7 +26,6 @@ impl ParagraphPane {
             Line::from(format!("Name: {}", epic.name)),
             Line::from(format!("Description: {}", epic.description)),
         ];
-
 
         let paragraph = Paragraph::new(lines);
         let block = Block::bordered().border_set(border::THICK);
@@ -92,6 +93,17 @@ impl ParagraphPane {
         let paragraph = Paragraph::new("Loading epics...");
         let block = Block::bordered().border_set(border::THICK);
 
+        Self {
+            paragraph,
+            block,
+            is_selected: false,
+        }
+    }
+}
+
+impl From<Paragraph<'static>> for ParagraphPane {
+    fn from(paragraph: Paragraph<'static>) -> Self {
+        let block = Block::bordered().border_set(border::THICK);
         Self {
             paragraph,
             block,

@@ -1,6 +1,7 @@
 use ratatui::layout::{Constraint, Direction};
+use reqwest::retry::Builder;
 
-use crate::view::{Pane, View, PaneTrait};
+use crate::view::{Pane, PaneTrait, View};
 
 #[derive(Default)]
 pub struct ViewBuilder {
@@ -104,11 +105,22 @@ impl ViewBuilder {
         }
 
         View {
-            sections: self.panes,
-            selected_section: self.selected_section_idx,
+            panes: self.panes,
+            selected_section_idx: self.selected_section_idx,
             last_selected_section: 0,
             is_selected: self.is_selected,
             direction: self.direction,
+        }
+    }
+}
+
+impl From<View> for ViewBuilder {
+    fn from(view: View) -> Self {
+        ViewBuilder {
+            panes: view.panes,
+            selected_section_idx: view.selected_section_idx,
+            is_selected: view.is_selected,
+            direction: view.direction,
         }
     }
 }

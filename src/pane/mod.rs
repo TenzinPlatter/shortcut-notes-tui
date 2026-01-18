@@ -7,6 +7,9 @@ pub use paragraph::ParagraphPane;
 mod error;
 pub use error::ErrorPane;
 
+mod epic;
+pub use epic::EpicPane;
+
 pub trait Selectable {
     fn is_selected(&self) -> bool;
     fn select(&mut self);

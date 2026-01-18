@@ -5,7 +5,7 @@ use crate::{
 };
 
 impl ApiClient {
-    pub async fn get_epics_view(&self) -> anyhow::Result<View> {
+    pub async fn get_epics_view(&self) -> crate::error_display::Result<View> {
         let epics = self.get_owned_epics().await?;
         let panes: Vec<_> = epics
             .into_iter()

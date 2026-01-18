@@ -2,68 +2,159 @@ use std::time::{Duration, Instant};
 
 use crate::pane::ErrorPane;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum ErrorSeverity {
-    Blocking,      // Stops app, requires acknowledgment
-    Notification,  // Temporary overlay, auto-dismisses
+    Blocking,     // Stops app, requires acknowledgment
+    Notification, // Temporary overlay, auto-dismisses
 }
 
 #[derive(Debug, Clone)]
-pub struct ErrorContext {
+pub struct AppError {
     pub severity: ErrorSeverity,
-    pub user_message: Option<String>,
-    pub show_details: bool,
+    pub message: String,
+    pub details: Option<String>,
 }
 
-impl std::fmt::Display for ErrorContext {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if let Some(msg) = &self.user_message {
-            write!(f, "{}", msg)
-        } else {
-            write!(f, "Error")
+impl AppError {
+    pub fn new(message: impl Into<String>) -> Self {
+        Self {
+            severity: ErrorSeverity::Notification,
+            message: message.into(),
+            details: None,
         }
     }
+
+    pub fn blocking(mut self) -> Self {
+        self.severity = ErrorSeverity::Blocking;
+        self
+    }
+
+    pub fn with_message(mut self, message: impl Into<String>) -> Self {
+        self.message = message.into();
+        self
+    }
+
+    pub fn with_details(mut self, details: impl Into<String>) -> Self {
+        self.details = Some(details.into());
+        self
+    }
+
+    pub fn severity(&self) -> &ErrorSeverity {
+        &self.severity
+    }
+
+    pub fn message(&self) -> &str {
+        &self.message
+    }
+
+    pub fn details(&self) -> Option<&str> {
+        self.details.as_deref()
+    }
 }
 
-impl std::error::Error for ErrorContext {}
+impl std::fmt::Display for AppError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.message)
+    }
+}
+
+impl std::error::Error for AppError {}
+
+// Common From implementations for standard error types
+impl From<std::io::Error> for AppError {
+    fn from(err: std::io::Error) -> Self {
+        Self::new(format!("{}", err))
+            .with_details(format!("{:?}", err))
+    }
+}
+
+impl From<reqwest::Error> for AppError {
+    fn from(err: reqwest::Error) -> Self {
+        Self::new(format!("{}", err))
+            .with_details(format!("{:?}", err))
+    }
+}
+
+impl From<serde_json::Error> for AppError {
+    fn from(err: serde_json::Error) -> Self {
+        Self::new(format!("{}", err))
+            .with_details(format!("{:?}", err))
+    }
+}
+
+impl From<std::env::VarError> for AppError {
+    fn from(err: std::env::VarError) -> Self {
+        Self::new(format!("{}", err))
+            .with_details(format!("{:?}", err))
+    }
+}
+
+impl From<uuid::Error> for AppError {
+    fn from(err: uuid::Error) -> Self {
+        Self::new(format!("{}", err))
+            .with_details(format!("{:?}", err))
+    }
+}
+
+impl From<tokio::task::JoinError> for AppError {
+    fn from(err: tokio::task::JoinError) -> Self {
+        Self::new(format!("{}", err))
+            .with_details(format!("{:?}", err))
+    }
+}
+
+pub type Result<T> = std::result::Result<T, AppError>;
 
 pub trait ErrorExt<T> {
-    fn blocking(self) -> anyhow::Result<T>;
-    fn with_message(self, msg: impl Into<String>) -> anyhow::Result<T>;
-    fn with_details(self) -> anyhow::Result<T>;
+    fn blocking(self) -> Result<T>;
+    fn with_message(self, msg: impl Into<String>) -> Result<T>;
+    fn with_details(self) -> Result<T>;
 }
 
-impl<T, E> ErrorExt<T> for Result<T, E>
+impl<T, E> ErrorExt<T> for std::result::Result<T, E>
 where
-    E: Into<anyhow::Error>,
+    E: std::fmt::Display + std::fmt::Debug + 'static,
 {
-    fn blocking(self) -> anyhow::Result<T> {
+    fn blocking(self) -> Result<T> {
+        self.map_err(|e| AppError::new(format!("{}", e))
+            .with_details(format!("{:?}", e))
+            .blocking())
+    }
+
+    fn with_message(self, msg: impl Into<String>) -> Result<T> {
         self.map_err(|e| {
-            e.into().context(ErrorContext {
-                severity: ErrorSeverity::Blocking,
-                user_message: None,
-                show_details: false,
-            })
+            // Check if e is already an AppError to preserve its severity
+            let severity = if let Some(app_err) = (&e as &dyn std::any::Any).downcast_ref::<AppError>() {
+                app_err.severity.clone()
+            } else {
+                ErrorSeverity::Notification
+            };
+
+            AppError {
+                severity,
+                message: msg.into(),
+                details: Some(format!("{:?}", e)),
+            }
         })
     }
 
-    fn with_message(self, msg: impl Into<String>) -> anyhow::Result<T> {
+    fn with_details(self) -> Result<T> {
         self.map_err(|e| {
-            e.into().context(ErrorContext {
-                severity: ErrorSeverity::Notification,
-                user_message: Some(msg.into()),
-                show_details: false,
-            })
-        })
-    }
+            // Check if e is already an AppError to preserve its severity
+            let severity = if let Some(app_err) = (&e as &dyn std::any::Any).downcast_ref::<AppError>() {
+                app_err.severity.clone()
+            } else {
+                ErrorSeverity::Notification
+            };
 
-    fn with_details(self) -> anyhow::Result<T> {
-        self.map_err(|e| {
-            e.into().context(ErrorContext {
-                severity: ErrorSeverity::Notification,
-                user_message: None,
-                show_details: true,
-            })
+            let msg = format!("{}", e);
+            let details = format!("{:?}", e);
+
+            AppError {
+                severity,
+                message: msg,
+                details: Some(details),
+            }
         })
     }
 }
@@ -71,44 +162,14 @@ where
 pub struct ErrorHandler;
 
 impl ErrorHandler {
-    pub fn handle(&self, err: &anyhow::Error) -> (ErrorPane, ErrorSeverity) {
-        // Walk the error chain looking for ErrorContext
-        let mut current: &dyn std::error::Error = err.as_ref();
-        let mut severity = ErrorSeverity::Notification;
-        let mut user_message: Option<String> = None;
-        let mut show_details = false;
-
-        // Collect all contexts in the chain
-        loop {
-            if let Some(ctx) = current.downcast_ref::<ErrorContext>() {
-                // Blocking takes precedence over notification
-                if matches!(ctx.severity, ErrorSeverity::Blocking) {
-                    severity = ErrorSeverity::Blocking;
-                }
-
-                // First user message wins
-                if user_message.is_none() && ctx.user_message.is_some() {
-                    user_message = ctx.user_message.clone();
-                }
-
-                // Any request for details enables it
-                if ctx.show_details {
-                    show_details = true;
-                }
-            }
-
-            match current.source() {
-                Some(source) => current = source,
-                None => break,
-            }
-        }
-
-        let message = user_message.unwrap_or_else(|| format!("{}", err));
+    pub fn handle(&self, err: &AppError) -> (ErrorPane, ErrorSeverity) {
+        let message = err.message();
+        let severity = err.severity().clone();
 
         let mut pane = ErrorPane::new("Error", message, severity.clone());
 
-        if show_details {
-            pane = pane.with_details(format!("{:#}", err));
+        if let Some(details) = err.details() {
+            pane = pane.with_details(details);
         }
 
         (pane, severity)
