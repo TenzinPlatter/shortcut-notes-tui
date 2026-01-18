@@ -30,9 +30,13 @@ impl ApiClient {
         let response = self.get_with_body("epics", body).await?;
         let epics_slim = response.json::<Vec<EpicSlim>>().await?;
 
-        // TODO?: maybe add a limit to how many we request to not bash the api
+        let owned_slim = epics_slim
+            .into_iter()
+            .filter(|epic| epic.owner_ids.contains(&self.user_id))
+            .collect::<Vec<_>>();
+
         let mut epics = Vec::new();
-        for epic in epics_slim.iter().take(2) {
+        for epic in owned_slim.iter().take(2) {
             let response = self.get(&format!("epics/{}", epic.id)).await?;
             let epic = response.json::<Epic>().await?;
             epics.push(epic);

@@ -1,7 +1,7 @@
 use ratatui::{
     buffer::Buffer,
     layout::Rect,
-    style::{Color, Style, Stylize},
+    style::Stylize,
     symbols::border,
     text::{Line, Text},
     widgets::{Block, Paragraph, Widget, WidgetRef},
@@ -27,22 +27,6 @@ impl ParagraphPane {
 
 
         let paragraph = Paragraph::new(lines);
-        let block = Block::bordered().border_set(border::THICK);
-
-        Self {
-            paragraph,
-            block,
-            is_selected: false,
-        }
-    }
-
-    pub fn cli_not_installed() -> Self {
-        let paragraph = Paragraph::new(Text::from(Line::from(
-            " GitHub CLI ('gh') is not installed or not found in PATH. Please install it and ensure it is accessible from your command line. "
-                .red()
-                .italic(),
-        )));
-
         let block = Block::bordered().border_set(border::THICK);
 
         Self {
@@ -96,6 +80,17 @@ impl ParagraphPane {
         let block = Block::bordered()
             .title(" Instructions ".bold().underlined().into_centered_line())
             .border_set(border::THICK);
+
+        Self {
+            paragraph,
+            block,
+            is_selected: false,
+        }
+    }
+
+    pub fn loading() -> Self {
+        let paragraph = Paragraph::new("Loading epics...");
+        let block = Block::bordered().border_set(border::THICK);
 
         Self {
             paragraph,
