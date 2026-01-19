@@ -22,7 +22,7 @@ pub struct Epic {
 }
 
 impl ApiClient {
-    pub async fn get_owned_epics(&self) -> crate::error_display::Result<Vec<Epic>> {
+    pub async fn get_owned_epics(&self) -> error_display::Result<Vec<Epic>> {
         let body = serde_json::json!({
             "includes_description": false
         });

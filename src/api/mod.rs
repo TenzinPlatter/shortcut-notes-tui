@@ -5,6 +5,7 @@ use uuid::Uuid;
 use crate::error_display;
 
 pub mod epic;
+pub mod story;
 
 pub const API_BASE_URL: &str = "https://api.app.shortcut.com/api/v3";
 

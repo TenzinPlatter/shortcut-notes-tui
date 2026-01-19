@@ -1,5 +1,5 @@
 use crate::{
-    api::ApiClient,
+    api::{epic::Epic, ApiClient},
     pane::ParagraphPane,
     view::{View, ViewBuilder},
 };
@@ -14,4 +14,9 @@ impl ApiClient {
 
         Ok(ViewBuilder::default().add_panes(panes).build())
     }
+}
+
+pub fn create_epics_view(epics: Vec<Epic>) -> View {
+    let panes: Vec<_> = epics.iter().map(ParagraphPane::epic).collect();
+    ViewBuilder::default().add_panes(panes).build()
 }

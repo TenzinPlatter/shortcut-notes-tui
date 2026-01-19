@@ -1,6 +1,4 @@
-use core::error;
-
-use crossterm::event::{self, Event, KeyCode, KeyEventKind};
+use crossterm::event::{self, Event, KeyEventKind};
 use ratatui::{
     DefaultTerminal, Frame,
     buffer::Buffer,
@@ -11,13 +9,19 @@ use tokio::sync::mpsc;
 use uuid::Uuid;
 
 use crate::{
-    api::{ApiClient, epic::Epic},
+    api::{
+        ApiClient,
+        epic::{Epic, view::create_epics_view},
+    },
     error_display::{self, AppError, ErrorExt, ErrorHandler, ErrorSeverity, Notification},
     get_api_key, get_user_id,
     keys::{AppKey, KeyHandler},
     pane::{ErrorPane, ParagraphPane},
     view::{View, ViewBuilder},
 };
+
+pub mod error_handling;
+pub mod view;
 
 /// Events sent from background tasks to the main app
 pub enum AppEvent {
@@ -71,14 +75,6 @@ impl App {
             error_handler: ErrorHandler,
             event_rx,
         })
-    }
-
-    fn get_loading_view() -> View {
-        let loading_pane = ParagraphPane::loading();
-        ViewBuilder::default()
-            .add_non_selectable(loading_pane)
-            .direction(Direction::Vertical)
-            .build()
     }
 
     pub async fn main_loop(&mut self, terminal: &mut DefaultTerminal) -> error_display::Result<()> {
@@ -146,84 +142,11 @@ impl App {
     fn handle_app_event(&mut self, event: AppEvent) {
         match event {
             AppEvent::EpicsLoaded(epics) => {
-                self.view = Self::create_epics_view(epics);
+                self.view = create_epics_view(epics);
             }
             AppEvent::EpicsFailed(error) => {
                 self.show_notification(error);
             }
         }
-    }
-
-    fn create_epics_view(epics: Vec<Epic>) -> View {
-        let panes: Vec<_> = epics.iter().map(ParagraphPane::epic).collect();
-
-        ViewBuilder::default().add_panes(panes).build()
-    }
-
-    pub fn show_notification(&mut self, error: error_display::AppError) {
-        let (pane, _) = self.error_handler.handle(&error);
-        self.notification = Some(Notification::new(pane));
-    }
-
-    pub fn show_blocking_error(
-        terminal: &mut DefaultTerminal,
-        mut error_pane: ErrorPane,
-    ) -> error_display::Result<()> {
-        let view = error_pane.as_view();
-
-        // Draw once
-        terminal.draw(|frame| {
-            let area = frame.area();
-            view.render_ref(area, frame.buffer_mut())
-        })?;
-
-        // Wait for any key
-        loop {
-            if let Event::Key(key) = event::read()?
-                && key.kind == KeyEventKind::Press
-            {
-                if key.code == AppKey::ShowErrorDetails.into() {
-                    error_pane.toggle_details();
-                    let view = error_pane.as_view();
-                    terminal.draw(|frame| {
-                        let area = frame.area();
-                        view.render_ref(area, frame.buffer_mut())
-                    })?;
-                } else {
-                    // break on any other key
-                    break;
-                }
-            }
-        }
-
-        Ok(())
-    }
-
-    pub async fn run(terminal: &mut DefaultTerminal) -> error_display::Result<()> {
-        match Self::init().await {
-            Ok(mut app) => app.main_loop(terminal).await,
-            Err(e) => {
-                let error_handler = ErrorHandler;
-                let (error_pane, severity) = error_handler.handle(&e);
-
-                match severity {
-                    ErrorSeverity::Blocking => {
-                        // Don't propagate errors from show_blocking_error - just try our best
-                        let _ = Self::show_blocking_error(terminal, error_pane);
-                        Ok(()) // Exit gracefully after showing error
-                    }
-                    ErrorSeverity::Notification => {
-                        // This shouldn't happen during init, but handle anyway
-                        Err(e) // Propagate the error
-                    }
-                }
-            }
-        }
-    }
-}
-
-impl WidgetRef for &App {
-    fn render_ref(&self, area: Rect, buf: &mut Buffer) {
-        self.view.render_ref(area, buf);
     }
 }
