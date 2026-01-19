@@ -1,10 +1,8 @@
 use anyhow::Context;
-use ratatui::{DefaultTerminal, layout::Direction};
+use ratatui::DefaultTerminal;
 
 use crate::{
-    api::ApiClient,
     app::App,
-    view::{View, ViewBuilder},
 };
 
 pub mod api;
@@ -12,15 +10,6 @@ pub mod app;
 pub mod keys;
 pub mod pane;
 pub mod view;
-
-pub async fn get_main_view(api_client: ApiClient) -> anyhow::Result<View> {
-    let epic_view = api_client.get_epics_view().await?;
-
-    Ok(ViewBuilder::default()
-        .add_non_selectable(epic_view)
-        .direction(Direction::Vertical)
-        .build())
-}
 
 pub async fn get_api_key() -> anyhow::Result<String> {
     std::env::var("SHORTCUT_API_TOKEN").context(

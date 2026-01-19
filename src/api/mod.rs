@@ -3,8 +3,10 @@ use reqwest::{Client, RequestBuilder, Response};
 use serde::Serialize;
 use uuid::Uuid;
 
+pub mod branch;
 pub mod epic;
 pub mod story;
+pub mod iteration;
 
 pub const API_BASE_URL: &str = "https://api.app.shortcut.com/api/v3";
 
@@ -22,7 +24,23 @@ fn get_full_path(endpoint: &str) -> String {
 }
 
 impl ApiClient {
-    pub async fn get_with_body<Body>(&self, endpoint: &str, body: Body) -> anyhow::Result<Response>
+    pub async fn post_with_body<Body>(
+        &self,
+        endpoint: &str,
+        body: &Body,
+    ) -> anyhow::Result<Response>
+    where
+        Body: Serialize,
+    {
+        let full_path = get_full_path(endpoint);
+        self.post_request(&full_path)
+            .json(&body)
+            .send()
+            .await
+            .with_context(|| format!("Failed to GET {} with body", &full_path))
+    }
+
+    pub async fn get_with_body<Body>(&self, endpoint: &str, body: &Body) -> anyhow::Result<Response>
     where
         Body: Serialize,
     {
@@ -45,6 +63,13 @@ impl ApiClient {
     fn get_request(&self, path: &str) -> RequestBuilder {
         self.http_client
             .get(path)
+            .header("Shortcut-Token", &self.api_token)
+            .header("Content-Type", "application/json")
+    }
+
+    fn post_request(&self, path: &str) -> RequestBuilder {
+        self.http_client
+            .post(path)
             .header("Shortcut-Token", &self.api_token)
             .header("Content-Type", "application/json")
     }

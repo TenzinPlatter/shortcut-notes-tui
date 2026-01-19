@@ -27,7 +27,7 @@ impl ApiClient {
             "includes_description": false
         });
 
-        let response = self.get_with_body("epics", body).await?;
+        let response = self.get_with_body("epics", &body).await?;
         let epics_slim = response.json::<Vec<EpicSlim>>().await?;
 
         let owned_slim = epics_slim

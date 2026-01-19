@@ -1,11 +1,6 @@
-use anyhow::{Context, bail};
+use anyhow::Context;
 use crossterm::event::{self, Event, KeyEventKind};
-use ratatui::{
-    DefaultTerminal, Frame,
-    buffer::Buffer,
-    layout::{Direction, Rect},
-    widgets::WidgetRef,
-};
+use ratatui::{DefaultTerminal, Frame, widgets::WidgetRef};
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
@@ -13,11 +8,11 @@ use crate::{
     api::{
         ApiClient,
         epic::{Epic, view::create_epics_view},
+        story::{Story, view::create_stories_view},
     },
     get_api_key, get_user_id,
     keys::{AppKey, KeyHandler},
-    pane::ParagraphPane,
-    view::{View, ViewBuilder},
+    view::View,
 };
 
 pub mod view;
@@ -26,6 +21,7 @@ pub mod view;
 pub enum AppEvent {
     UnexpectedError(anyhow::Error),
     EpicsLoaded(Vec<Epic>),
+    StoriesLoaded(Vec<Story>),
 }
 
 pub struct App {
@@ -33,16 +29,20 @@ pub struct App {
     exit: bool,
     api_client: ApiClient,
     event_rx: mpsc::UnboundedReceiver<AppEvent>,
+    epics: Option<Vec<Epic>>,
+    stories: Option<Vec<Story>>,
 }
 
 impl App {
     pub async fn init() -> anyhow::Result<Self> {
-        let api_key = get_api_key().await?;
-        let user_id = get_user_id()
-            .await?
-            .parse::<Uuid>()
-            .context("Got invalid user id")?;
-        let api_client = ApiClient::new(api_key, user_id);
+        let api_client = {
+            let api_key = get_api_key().await?;
+            let user_id = get_user_id()
+                .await?
+                .parse::<Uuid>()
+                .context("Got invalid user id")?;
+            ApiClient::new(api_key, user_id)
+        };
 
         // Create channel for background tasks to communicate with main app
         let (event_tx, event_rx) = mpsc::unbounded_channel();
@@ -53,9 +53,17 @@ impl App {
         // Spawn background task to fetch epics
         let api_client_clone = api_client.clone();
         tokio::spawn(async move {
-            match api_client_clone.get_owned_epics().await {
-                Ok(epics) => {
-                    let _ = event_tx.send(AppEvent::EpicsLoaded(epics));
+            let iteration = match api_client_clone.get_current_iteration().await {
+                Ok(iteration) => iteration,
+                Err(e) => {
+                    let _ = event_tx.send(AppEvent::UnexpectedError(e));
+                    return;
+                }
+            };
+
+            match api_client_clone.get_iteration_stories(&iteration).await {
+                Ok(stories) => {
+                    let _ = event_tx.send(AppEvent::StoriesLoaded(stories));
                 }
                 Err(e) => {
                     let _ = event_tx.send(AppEvent::UnexpectedError(e));
@@ -68,26 +76,33 @@ impl App {
             exit: false,
             api_client,
             event_rx,
+            epics: None,
+            stories: None,
         })
     }
 
     pub async fn main_loop(&mut self, terminal: &mut DefaultTerminal) -> anyhow::Result<()> {
         while !self.exit {
             terminal.draw(|frame| self.draw(frame))?;
-            self.handle_events().await?; // blocks until an event occurs, thus only draw on change
+            self.handle_events().await?;
         }
         Ok(())
     }
 
     fn draw(&mut self, frame: &mut Frame) {
-        // Draw main view
-        let area = frame.area();
-        self.view.render_ref(area, frame.buffer_mut());
+        self.view.render_ref(frame.area(), frame.buffer_mut());
     }
 
     async fn handle_events(&mut self) -> anyhow::Result<()> {
         tokio::select! {
-            terminal_event = tokio::task::spawn_blocking(event::read) => {
+            // Poll for terminal events with a timeout to avoid blocking forever
+            terminal_event = tokio::task::spawn_blocking(|| {
+                if event::poll(std::time::Duration::from_millis(100))? {
+                    event::read()
+                } else {
+                    Ok(Event::Resize(0, 0)) // Dummy event to indicate no real event
+                }
+            }) => {
                 match terminal_event?? {
                     Event::Key(key_event) if key_event.kind == KeyEventKind::Press => {
                         // Dismiss notification on any key
@@ -103,7 +118,7 @@ impl App {
 
             // Handle app events from background tasks
             Some(app_event) = self.event_rx.recv() => {
-                self.handle_app_event(app_event);
+                self.handle_app_event(app_event)?;
             }
         }
 
@@ -117,6 +132,9 @@ impl App {
             }
             AppEvent::EpicsLoaded(epics) => {
                 self.view = create_epics_view(epics);
+            }
+            AppEvent::StoriesLoaded(stories) => {
+                self.view = create_stories_view(stories);
             }
         }
 

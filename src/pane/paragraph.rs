@@ -8,7 +8,7 @@ use ratatui::{
 };
 
 use crate::{
-    api::epic::Epic,
+    api::{epic::Epic, story::Story},
     keys::{AppKey, KeyHandler},
     pane::Selectable,
 };
@@ -20,6 +20,22 @@ pub struct ParagraphPane {
 }
 
 impl ParagraphPane {
+    pub fn story(story: &Story) -> Self {
+        let lines = vec![
+            Line::from(format!("Name: {}", story.name)),
+            Line::from(format!("Description: {}", story.description)),
+        ];
+
+        let paragraph = Paragraph::new(lines);
+        let block = Block::bordered().border_set(border::THICK);
+
+        Self {
+            paragraph,
+            block,
+            is_selected: false,
+        }
+    }
+
     pub fn epic(epic: &Epic) -> Self {
         let lines = vec![
             Line::from(format!("ID: {}", epic.id)),
@@ -90,7 +106,7 @@ impl ParagraphPane {
     }
 
     pub fn loading() -> Self {
-        let paragraph = Paragraph::new("Loading epics...");
+        let paragraph = Paragraph::new("Loading stories...");
         let block = Block::bordered().border_set(border::THICK);
 
         Self {
