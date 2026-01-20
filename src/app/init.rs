@@ -16,7 +16,7 @@ impl App {
 
         let api_client = {
             let api_key = get_api_key().await?;
-            let user_id = get_user_id()
+            let user_id = get_user_id(config.user_id)
                 .await?
                 .parse::<Uuid>()
                 .context("Got invalid user id")?;
