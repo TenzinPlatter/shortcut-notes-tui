@@ -1,5 +1,5 @@
 use anyhow::Context;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::api::{ApiClient, branch::Branch, story::comment::StoryComment};
@@ -7,8 +7,7 @@ use crate::api::{ApiClient, branch::Branch, story::comment::StoryComment};
 pub mod comment;
 pub mod view;
 
-#[derive(Deserialize)]
-#[allow(dead_code)] // TODO: remove, just while implementing
+#[derive(Deserialize, Serialize, Clone)]
 pub struct Story {
     pub branches: Vec<Branch>,
     pub completed: bool,

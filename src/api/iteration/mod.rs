@@ -1,18 +1,20 @@
 use anyhow::Context;
 use chrono::{NaiveDate, Utc};
 use futures::future::try_join_all;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::api::{
     ApiClient,
     story::{Story, StorySlim},
 };
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct Iteration {
     id: i32,
     name: String,
     description: String,
+    pub start_date: NaiveDate,
+    pub end_date: NaiveDate,
 }
 
 #[derive(Deserialize)]
@@ -50,7 +52,7 @@ impl ApiClient {
         let slim_owned: Vec<_> = stories_slim.iter().filter(|s| s.owner_ids.contains(&self.user_id)).collect();
 
         let stories = {
-            let len = slim_owned.len().min(5);
+            let len = slim_owned.len();
             let futures = slim_owned.into_iter().take(len).map(|slim| async move {
                 let query = format!("stories/{}", slim.id);
                 let response = self.get(&query).await?;

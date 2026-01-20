@@ -7,6 +7,7 @@ use crate::{
 
 pub mod api;
 pub mod app;
+pub mod config;
 pub mod keys;
 pub mod pane;
 pub mod view;
