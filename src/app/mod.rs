@@ -65,7 +65,7 @@ impl App {
                 }
             };
 
-            match api_client_clone.get_iteration_stories(&iteration).await {
+            match api_client_clone.get_owned_iteration_stories(&iteration).await {
                 Ok(stories) => {
                     let _ = event_tx.send(AppEvent::StoriesLoaded(stories));
                 }

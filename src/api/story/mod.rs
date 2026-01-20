@@ -1,5 +1,6 @@
 use anyhow::Context;
 use serde::Deserialize;
+use uuid::Uuid;
 
 use crate::api::{ApiClient, branch::Branch, story::comment::StoryComment};
 
@@ -22,6 +23,7 @@ pub struct Story {
 #[derive(Deserialize)]
 pub struct StorySlim {
     pub id: i32,
+    pub owner_ids: Vec<Uuid>,
 }
 
 impl ApiClient {

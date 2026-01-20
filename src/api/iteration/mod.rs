@@ -42,15 +42,16 @@ impl ApiClient {
         }
     }
 
-    pub async fn get_iteration_stories(&self, iteration: &Iteration) -> anyhow::Result<Vec<Story>> {
+    pub async fn get_owned_iteration_stories(&self, iteration: &Iteration) -> anyhow::Result<Vec<Story>> {
         let response = self
             .get(&format!("iterations/{}/stories", iteration.id))
             .await?;
         let stories_slim = response.json::<Vec<StorySlim>>().await?;
+        let slim_owned: Vec<_> = stories_slim.iter().filter(|s| s.owner_ids.contains(&self.user_id)).collect();
 
         let stories = {
-            let len = stories_slim.len().min(5);
-            let futures = stories_slim.into_iter().take(len).map(|slim| async move {
+            let len = slim_owned.len().min(5);
+            let futures = slim_owned.into_iter().take(len).map(|slim| async move {
                 let query = format!("stories/{}", slim.id);
                 let response = self.get(&query).await?;
                 response
