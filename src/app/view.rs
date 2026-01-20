@@ -11,8 +11,16 @@ use crate::{
 };
 
 impl App {
+    pub fn get_loading_view_iteration() -> View {
+        let loading_pane = ParagraphPane::loading("iteration");
+        ViewBuilder::default()
+            .add_non_selectable(loading_pane)
+            .direction(Direction::Vertical)
+            .build()
+    }
+
     pub fn get_loading_view() -> View {
-        let loading_pane = ParagraphPane::loading();
+        let loading_pane = ParagraphPane::loading("stories");
         ViewBuilder::default()
             .add_non_selectable(loading_pane)
             .direction(Direction::Vertical)

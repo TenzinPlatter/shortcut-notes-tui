@@ -105,8 +105,8 @@ impl ParagraphPane {
         }
     }
 
-    pub fn loading() -> Self {
-        let paragraph = Paragraph::new("Loading stories...");
+    pub fn loading(thing: &str) -> Self {
+        let paragraph = Paragraph::new(format!("Loading {}...", thing));
         let block = Block::bordered().border_set(border::THICK);
 
         Self {

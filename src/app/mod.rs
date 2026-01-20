@@ -22,6 +22,7 @@ pub enum AppEvent {
     UnexpectedError(anyhow::Error),
     EpicsLoaded(Vec<Epic>),
     StoriesLoaded(Vec<Story>),
+    IterationLoaded,
 }
 
 pub struct App {
@@ -48,13 +49,16 @@ impl App {
         let (event_tx, event_rx) = mpsc::unbounded_channel();
 
         // Start with a loading view
-        let view = Self::get_loading_view();
+        let view = Self::get_loading_view_iteration();
 
         // Spawn background task to fetch epics
         let api_client_clone = api_client.clone();
         tokio::spawn(async move {
             let iteration = match api_client_clone.get_current_iteration().await {
-                Ok(iteration) => iteration,
+                Ok(iteration) => {
+                    let _ = event_tx.send(AppEvent::IterationLoaded);
+                    iteration
+                },
                 Err(e) => {
                     let _ = event_tx.send(AppEvent::UnexpectedError(e));
                     return;
@@ -136,6 +140,9 @@ impl App {
             AppEvent::StoriesLoaded(stories) => {
                 self.view = create_stories_view(stories);
             }
+            AppEvent::IterationLoaded => {
+                self.view = App::get_loading_view();
+            },
         }
 
         Ok(())

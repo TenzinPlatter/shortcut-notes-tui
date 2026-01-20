@@ -1,7 +1,12 @@
-use chrono::{DateTime, FixedOffset, Utc};
+use anyhow::Context;
+use chrono::{NaiveDate, Utc};
+use futures::future::try_join_all;
 use serde::Deserialize;
 
-use crate::api::{story::{Story, StorySlim}, ApiClient};
+use crate::api::{
+    ApiClient,
+    story::{Story, StorySlim},
+};
 
 #[derive(Deserialize)]
 pub struct Iteration {
@@ -13,19 +18,19 @@ pub struct Iteration {
 #[derive(Deserialize)]
 pub struct IterationSlim {
     id: i32,
-    start_date: DateTime<FixedOffset>,
-    end_date: DateTime<FixedOffset>,
+    start_date: NaiveDate,
+    end_date: NaiveDate,
 }
 
 impl ApiClient {
     pub async fn get_current_iteration(&self) -> anyhow::Result<Iteration> {
         let response = self.get("iterations").await?;
         let iterations_slim = response.json::<Vec<IterationSlim>>().await?;
-        let now = Utc::now();
+        let today = Utc::now().date_naive();
         let current_iteration_id = iterations_slim
             .iter()
             // will return first that matches condition
-            .find(|it| it.start_date <= now && it.end_date >= now)
+            .find(|it| it.start_date <= today && it.end_date >= today)
             .map(|it| it.id);
 
         if let Some(id) = current_iteration_id {
@@ -38,18 +43,23 @@ impl ApiClient {
     }
 
     pub async fn get_iteration_stories(&self, iteration: &Iteration) -> anyhow::Result<Vec<Story>> {
-        let response = self.get(&format!("iterations/{}/stories", iteration.id)).await?;
+        let response = self
+            .get(&format!("iterations/{}/stories", iteration.id))
+            .await?;
         let stories_slim = response.json::<Vec<StorySlim>>().await?;
 
         let stories = {
-            let mut stories = Vec::with_capacity(stories_slim.len());
-            for slim in stories_slim.into_iter() {
+            let len = stories_slim.len().min(5);
+            let futures = stories_slim.into_iter().take(len).map(|slim| async move {
                 let query = format!("stories/{}", slim.id);
                 let response = self.get(&query).await?;
-                let story = response.json::<Story>().await?;
-                stories.push(story);
-            }
-            stories
+                response
+                    .json::<Story>()
+                    .await
+                    .context("Failed to parse as Story")
+            });
+            
+            try_join_all(futures).await?
         };
 
         Ok(stories)
