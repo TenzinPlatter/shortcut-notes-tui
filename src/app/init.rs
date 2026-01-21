@@ -1,7 +1,6 @@
 use anyhow::{Context, Result};
 use chrono::Utc;
 use tokio::sync::mpsc;
-use uuid::Uuid;
 
 use crate::{
     api::{ApiClient, iteration::Iteration},
@@ -12,16 +11,16 @@ use crate::{
 
 impl App {
     pub async fn init() -> Result<Self> {
-        let config = Config::read()?;
+        let mut config = Config::read()?;
 
         let api_client = {
             let api_key = get_api_key().await?;
-            let user_id = get_user_id(config.user_id)
-                .await?
-                .parse::<Uuid>()
-                .context("Got invalid user id")?;
+            let user_id = get_user_id(config.user_id, &api_key).await?;
             ApiClient::new(api_key, user_id)
         };
+
+        config.user_id = Some(api_client.user_id);
+        config.write()?;
 
         // Create channel for background tasks to communicate with main app
         let (event_tx, event_rx) = mpsc::unbounded_channel();
