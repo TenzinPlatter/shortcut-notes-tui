@@ -18,10 +18,12 @@ pub enum AppKey {
     Down,
     Quit,
     ShowErrorDetails,
+    Select,
 }
 
 impl AppKey {
     pub fn as_keycode(&self) -> KeyCode {
+        // NOTE: also add to function below when adding a variant
         match self {
             AppKey::Left => KeyCode::Char('h'),
             AppKey::Right => KeyCode::Char('l'),
@@ -29,11 +31,11 @@ impl AppKey {
             AppKey::Down => KeyCode::Char('j'),
             AppKey::Quit => KeyCode::Char('q'),
             AppKey::ShowErrorDetails => KeyCode::Char('d'),
+            AppKey::Select => KeyCode::Enter,
         }
     }
 }
 
-// TODO: make this try_from
 impl TryFrom<KeyCode> for AppKey {
     type Error = ();
 
@@ -45,6 +47,7 @@ impl TryFrom<KeyCode> for AppKey {
             KeyCode::Char('j') => Ok(AppKey::Down),
             KeyCode::Char('q') => Ok(AppKey::Quit),
             KeyCode::Char('d') => Ok(AppKey::ShowErrorDetails),
+            KeyCode::Enter => Ok(AppKey::Select),
             _ => Err(()),
         }
     }

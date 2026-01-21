@@ -2,12 +2,10 @@ use anyhow::Result;
 
 use crate::{
     api::{
-        epic::{Epic, view::create_epics_view},
+        epic::{view::create_epics_view, Epic},
         iteration::Iteration,
         story::Story,
-    },
-    app::App,
-    view::{ViewBuilder, list::ListPane},
+    }, app::App, pane::ListPane, view::ViewBuilder
 };
 
 /// Events sent from background tasks to the main app

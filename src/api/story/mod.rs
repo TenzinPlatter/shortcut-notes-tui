@@ -1,12 +1,12 @@
 use anyhow::Context;
-use ratatui::{
-    text::{Line, Text},
-    widgets::ListItem,
-};
+use ratatui::{style::Style, text::Line, widgets::ListItem};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::api::{ApiClient, branch::Branch, story::comment::StoryComment};
+use crate::{
+    api::{ApiClient, branch::Branch, story::comment::StoryComment},
+    view::list::ExpandableListItem,
+};
 
 pub mod comment;
 
@@ -58,21 +58,25 @@ impl ApiClient {
     }
 }
 
-impl From<Story> for ListItem<'static> {
-    fn from(story: Story) -> Self {
-        let description = story
-            .description
-            .lines()
-            .map(|l| Line::from(format!("  {}", l)));
-
+impl ExpandableListItem for Story {
+    fn as_list_item(&self, expanded: bool) -> ListItem<'static> {
         let mut text = vec![
-            Line::from(format!("Name: {}", story.name)),
+            Line::from(self.name.to_string()),
             Line::from("Description:"),
         ];
 
-        text.extend(description);
+        if expanded {
+            for line in self.description.lines() {
+                text.push(Line::from(format!("  {}", line)));
+            }
+        } else {
+            text.push(
+                Line::from("  Press <Enter> to view description").style(Style::default().italic()),
+            )
+        }
+
         text.push(Line::from(""));
 
-        Self::new(text)
+        ListItem::new(text)
     }
 }
