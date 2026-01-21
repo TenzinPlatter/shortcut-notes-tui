@@ -7,17 +7,18 @@ pub mod branch;
 pub mod epic;
 pub mod story;
 pub mod iteration;
+pub mod user;
 
 pub const API_BASE_URL: &str = "https://api.app.shortcut.com/api/v3";
 
 #[derive(Clone)]
 pub struct ApiClient {
     api_token: String,
-    user_id: Uuid,
+    pub user_id: Uuid,
     http_client: Client,
 }
 
-fn get_full_path(endpoint: &str) -> String {
+pub fn get_full_path(endpoint: &str) -> String {
     // endpoint should not start with / as we append it when formatting
     assert!(!endpoint.starts_with("/"));
     format!("{}/{}", API_BASE_URL, endpoint)

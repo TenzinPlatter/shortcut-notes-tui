@@ -1,9 +1,8 @@
 use anyhow::Context;
 use ratatui::DefaultTerminal;
+use uuid::Uuid;
 
-use crate::{
-    app::App,
-};
+use crate::{api::{user::get_user_id_from_api, ApiClient}, app::App};
 
 pub mod api;
 pub mod app;
@@ -18,11 +17,17 @@ pub async fn get_api_key() -> anyhow::Result<String> {
     )
 }
 
-pub async fn get_user_id() -> anyhow::Result<String> {
-    // TODO: maybe fetch this from the API using the token instead of env var
-    std::env::var("SHORTCUT_USER_ID").context(
-        "Please set the SHORTCUT_USER_ID environment variable to authenticate with Shortcut",
-    )
+pub async fn get_user_id(
+    saved_user_id: Option<Uuid>,
+    api_token: &str
+) -> anyhow::Result<Uuid> {
+    let id = if let Some(id) = saved_user_id {
+        id
+    } else {
+        get_user_id_from_api(api_token).await?
+    };
+
+    Ok(id)
 }
 
 pub async fn run(terminal: &mut DefaultTerminal) -> anyhow::Result<()> {

@@ -1,5 +1,6 @@
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 use crate::api::{iteration::Iteration, story::Story};
 
@@ -7,6 +8,7 @@ use crate::api::{iteration::Iteration, story::Story};
 pub struct Config {
     pub current_iteration: Option<Iteration>,
     pub iteration_stories: Option<Vec<Story>>,
+    pub user_id: Option<Uuid>,
 }
 
 impl Config {
