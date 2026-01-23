@@ -2,7 +2,7 @@ use anyhow::Context;
 use ratatui::DefaultTerminal;
 use uuid::Uuid;
 
-use crate::{api::{user::get_user_id_from_api, ApiClient}, app::App};
+use crate::{api::user::get_user_id_from_api, app::App};
 
 pub mod api;
 pub mod app;
@@ -10,6 +10,8 @@ pub mod config;
 pub mod keys;
 pub mod pane;
 pub mod view;
+pub mod cache;
+pub mod macros;
 
 pub async fn get_api_key() -> anyhow::Result<String> {
     std::env::var("SHORTCUT_API_TOKEN").context(

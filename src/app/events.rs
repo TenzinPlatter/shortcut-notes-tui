@@ -1,7 +1,14 @@
-use std::{env, io::Stdout, process::Command};
+use std::{
+    env,
+    io::{Stdout, stdout},
+    process::Command,
+};
 
 use anyhow::Result;
-use crossterm::terminal;
+use crossterm::{
+    ExecutableCommand,
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
+};
 use ratatui::{Terminal, prelude::CrosstermBackend};
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -42,32 +49,39 @@ impl App {
             }
             AppEvent::StoriesLoaded((stories, are_saved)) => {
                 if !are_saved
-                    && let Some(saved) = &self.config.iteration_stories
+                    && let Some(saved) = &self.cache.iteration_stories
                     && saved.iter().zip(stories.iter()).all(|(a, b)| a.id == b.id)
                 {
                     return Ok(());
                 }
 
-                self.config.iteration_stories = Some(stories.clone());
-                self.config.write()?;
+                self.cache.iteration_stories = Some(stories.clone());
+                self.cache.write()?;
                 self.view = ViewBuilder::default()
                     .add_selectable(ListPane::new(stories, sender))
                     .build();
             }
             AppEvent::IterationLoaded(iteration) => {
-                self.config.current_iteration = Some(iteration);
-                self.config.write()?;
+                self.cache.current_iteration = Some(iteration);
+                self.cache.write()?;
                 self.view = App::get_loading_view_stories();
             }
             AppEvent::OpenInEditor(file) => {
                 let editor = env::var("EDITOR").unwrap_or("nvim".to_string());
-                let iteration_name = match &self.config.current_iteration {
+                let iteration_name = match &self.cache.current_iteration {
                     Some(it) => it.name.clone(),
                     None => "No Iteration".to_string(),
                 };
 
                 let note_path = format!("{}/{}/{}", self.config.notes_dir, iteration_name, file);
+
+                stdout().execute(LeaveAlternateScreen)?;
+                disable_raw_mode()?;
+
                 Command::new(editor).arg(note_path).status()?;
+
+                stdout().execute(EnterAlternateScreen)?;
+                enable_raw_mode()?;
                 terminal.clear()?;
             }
         }

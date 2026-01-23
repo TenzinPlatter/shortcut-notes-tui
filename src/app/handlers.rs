@@ -3,7 +3,6 @@ use std::io::Stdout;
 use anyhow::Result;
 use crossterm::{
     event::{self, Event, KeyEventKind},
-    terminal,
 };
 use ratatui::{Terminal, prelude::CrosstermBackend};
 use tokio::sync::mpsc::UnboundedSender;

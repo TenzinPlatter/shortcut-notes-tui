@@ -3,9 +3,7 @@ use ratatui::{DefaultTerminal, Frame, widgets::WidgetRef};
 use tokio::sync::mpsc;
 
 use crate::{
-    api::ApiClient,
-    config::Config,
-    view::View,
+    api::ApiClient, cache::Cache, config::Config, view::View
 };
 
 pub mod events;
@@ -23,6 +21,7 @@ pub struct App {
     pub reciever: mpsc::UnboundedReceiver<AppEvent>,
     pub sender: mpsc::UnboundedSender<AppEvent>,
     pub config: Config,
+    pub cache: Cache,
 }
 
 impl App {
@@ -31,6 +30,7 @@ impl App {
             terminal.draw(|frame| self.draw(frame))?;
             self.handle_events(self.sender.clone(), terminal).await?;
         }
+
         Ok(())
     }
 

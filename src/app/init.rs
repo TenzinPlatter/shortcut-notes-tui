@@ -3,24 +3,22 @@ use chrono::Utc;
 use tokio::sync::mpsc;
 
 use crate::{
-    api::{ApiClient, iteration::Iteration},
-    app::{App, events::AppEvent},
-    config::Config,
-    get_api_key, get_user_id,
+    api::{iteration::Iteration, ApiClient}, app::{events::AppEvent, App}, cache::Cache, config::Config, get_api_key, get_user_id
 };
 
 impl App {
     pub async fn init() -> Result<Self> {
-        let mut config = Config::read()?;
+        let config = Config::read()?;
+        let mut cache = Cache::read(config.cache_dir.clone());
 
         let api_client = {
             let api_key = get_api_key().await?;
-            let user_id = get_user_id(config.user_id, &api_key).await?;
+            let user_id = get_user_id(cache.user_id, &api_key).await?;
             ApiClient::new(api_key, user_id)
         };
 
-        config.user_id = Some(api_client.user_id);
-        config.write()?;
+        cache.user_id = Some(api_client.user_id);
+        cache.write()?;
 
         // Create channel for background tasks to communicate with main app
         let (event_tx, event_rx) = mpsc::unbounded_channel();
@@ -30,8 +28,8 @@ impl App {
         let view = Self::get_loading_view_iteration();
 
         let api_client_clone = api_client.clone();
-        let saved_iteration = config.current_iteration.clone();
-        let saved_stories = config.iteration_stories.clone();
+        let saved_iteration = cache.current_iteration.clone();
+        let saved_stories = cache.iteration_stories.clone();
         tokio::spawn(async move {
             let iteration = match get_current_iteration(saved_iteration, &api_client_clone).await {
                 Ok(it) => {
@@ -69,6 +67,7 @@ impl App {
             api_client,
             reciever: event_rx,
             sender: event_tx_clone,
+            cache,
         })
     }
 }

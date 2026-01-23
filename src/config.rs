@@ -1,24 +1,19 @@
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
-
-use crate::api::{iteration::Iteration, story::Story};
 
 #[derive(Deserialize, Serialize, Default, Clone)]
 pub struct Config {
-    pub current_iteration: Option<Iteration>,
-    pub iteration_stories: Option<Vec<Story>>,
-    pub user_id: Option<Uuid>,
     pub notes_dir: String,
+    pub cache_dir: Option<String>,
 }
 
 impl Config {
     pub fn read() -> anyhow::Result<Self> {
-        confy::load("shortcut-notes-tui", Some("config")).context("Failed to read config")
+        confy::load("shortcut-notes", Some("config")).context("Failed to read config")
     }
 
     pub fn write(&self) -> anyhow::Result<()> {
-        confy::store("shortcut-notes-tui", Some("config"), self)?;
+        confy::store("shortcut-notes", Some("config"), self)?;
         Ok(())
     }
 }
