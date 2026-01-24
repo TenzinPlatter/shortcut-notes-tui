@@ -94,8 +94,8 @@ fn open_note_in_editor(
 
     let mut f = OpenOptions::new()
         .create(true)
+        .append(true)
         .read(true)
-        .write(true)
         .open(&note.path)?;
     let buf = read_to_string(&note.path)?;
 
