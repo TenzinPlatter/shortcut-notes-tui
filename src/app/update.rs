@@ -67,11 +67,10 @@ impl App {
             }
 
             Msg::IterationLoaded(iteration) => {
-                let iteration_id = iteration.id;
                 self.model.data.current_iteration = Some(iteration.clone());
-                self.model.cache.current_iteration = Some(iteration);
+                self.model.cache.current_iteration = Some(iteration.clone());
 
-                vec![Cmd::WriteCache, Cmd::FetchStories { iteration_id: iteration_id as i64 }]
+                vec![Cmd::WriteCache, Cmd::FetchStories { iteration }]
             }
 
             Msg::NoteOpened => vec![Cmd::None],

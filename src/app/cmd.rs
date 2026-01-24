@@ -8,7 +8,7 @@ use tokio::sync::mpsc::UnboundedSender;
 use std::{env, fs::{create_dir_all, read_to_string, OpenOptions}, process::Command as ProcessCommand};
 
 use crate::{
-    api::{iteration::Iteration, story::Story},
+    api::{iteration::Iteration, story::Story, ApiClient},
     app::msg::Msg,
     cache::Cache,
     config::Config,
@@ -21,7 +21,7 @@ pub enum Cmd {
     None,
     OpenNote { story: Story, iteration: Option<Iteration> },
     WriteCache,
-    FetchStories { iteration_id: i64 },
+    FetchStories { iteration: Iteration },
     FetchEpics,
     Batch(Vec<Cmd>),
 }
@@ -31,6 +31,7 @@ pub async fn execute(
     sender: UnboundedSender<Msg>,
     config: &Config,
     cache: &mut Cache,
+    api_client: &ApiClient,
     terminal: &mut Terminal<CrosstermBackend<Stdout>>,
 ) -> Result<()> {
     match cmd {
@@ -48,21 +49,31 @@ pub async fn execute(
             Ok(())
         }
 
-        Cmd::FetchStories { iteration_id } => {
-            // TODO: Implement in next task - spawn async task to fetch stories
-            dbg_file!("TODO: FetchStories command for iteration {}", iteration_id);
+        Cmd::FetchStories { iteration } => {
+            let sender = sender.clone();
+            let api_client = api_client.clone();
+
+            tokio::spawn(async move {
+                match api_client.get_owned_iteration_stories(&iteration).await {
+                    Ok(stories) => {
+                        sender.send(Msg::StoriesLoaded { stories, from_cache: false }).ok();
+                    }
+                    Err(e) => {
+                        sender.send(Msg::Error(e.to_string())).ok();
+                    }
+                }
+            });
             Ok(())
         }
 
         Cmd::FetchEpics => {
-            // TODO: Implement in next task - spawn async task to fetch epics
-            dbg_file!("TODO: FetchEpics command");
+            dbg_file!("FetchEpics not yet implemented");
             Ok(())
         }
 
         Cmd::Batch(commands) => {
             for cmd in commands {
-                Box::pin(execute(cmd, sender.clone(), config, cache, terminal)).await?;
+                Box::pin(execute(cmd, sender.clone(), config, cache, api_client, terminal)).await?;
             }
             Ok(())
         }
