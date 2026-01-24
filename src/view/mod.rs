@@ -9,6 +9,8 @@ use crate::{
     keys::{AppKey, KeyHandler},
 };
 
+pub mod story_list;
+
 mod section;
 mod view_builder;
 
