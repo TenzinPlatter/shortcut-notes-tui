@@ -1,4 +1,3 @@
-pub mod epic;
 pub mod story_list;
 
 #[cfg(any())]
@@ -37,10 +36,10 @@ pub struct View {
 
 #[cfg(any())]
 impl View {
-
-    
     fn select_section(&mut self, new: usize) {
-        self.panes[self.selected_section_idx].view_section.unselect();
+        self.panes[self.selected_section_idx]
+            .view_section
+            .unselect();
         self.panes[new].view_section.select();
 
         self.last_selected_section = self.selected_section_idx;
@@ -83,7 +82,9 @@ impl Selectable for View {
     }
 
     fn unselect(&mut self) {
-        self.panes[self.selected_section_idx].view_section.unselect();
+        self.panes[self.selected_section_idx]
+            .view_section
+            .unselect();
         self.is_selected = false;
     }
 

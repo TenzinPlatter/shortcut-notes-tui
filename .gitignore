@@ -1,3 +1,6 @@
 target
 .env
 debug.log
+.claude
+docs/plans
+CLAUDE.md

@@ -1,6 +1,6 @@
 use std::{
     env,
-    fs::{remove_file, File},
+    fs::{File, remove_file},
     io::{Read, Write},
     path::{Path, PathBuf},
 };
@@ -8,7 +8,10 @@ use std::{
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{api::{iteration::Iteration, story::Story}, dbg_file};
+use crate::{
+    api::{iteration::Iteration, story::Story},
+    dbg_file,
+};
 
 #[derive(Deserialize, Serialize, Clone)]
 pub struct Cache {

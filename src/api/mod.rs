@@ -5,8 +5,8 @@ use uuid::Uuid;
 
 pub mod branch;
 pub mod epic;
-pub mod story;
 pub mod iteration;
+pub mod story;
 pub mod user;
 
 pub const API_BASE_URL: &str = "https://api.app.shortcut.com/api/v3";

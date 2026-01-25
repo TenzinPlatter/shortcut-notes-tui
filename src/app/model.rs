@@ -22,40 +22,11 @@ pub struct DataState {
 
 #[derive(Default)]
 pub struct UiState {
-    pub focused_pane: PaneId,
     pub story_list: StoryListState,
-    pub epic_pane: EpicPaneState,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum PaneId {
-    #[default]
-    StoryList,
-    Epic,
 }
 
 #[derive(Default, Clone)]
 pub struct StoryListState {
     pub selected_index: Option<usize>,
     pub expanded_items: HashSet<usize>,
-}
-
-#[derive(Default, Clone)]
-pub struct EpicPaneState {
-}
-
-impl UiState {
-    pub fn focus_next_pane(&mut self) {
-        self.focused_pane = match self.focused_pane {
-            PaneId::StoryList => PaneId::Epic,
-            PaneId::Epic => PaneId::StoryList,
-        };
-    }
-
-    pub fn focus_prev_pane(&mut self) {
-        self.focused_pane = match self.focused_pane {
-            PaneId::Epic => PaneId::StoryList,
-            PaneId::StoryList => PaneId::Epic,
-        };
-    }
 }

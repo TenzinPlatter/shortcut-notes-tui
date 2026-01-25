@@ -19,10 +19,7 @@ pub async fn get_api_key() -> anyhow::Result<String> {
     )
 }
 
-pub async fn get_user_id(
-    saved_user_id: Option<Uuid>,
-    api_token: &str
-) -> anyhow::Result<Uuid> {
+pub async fn get_user_id(saved_user_id: Option<Uuid>, api_token: &str) -> anyhow::Result<Uuid> {
     let id = if let Some(id) = saved_user_id {
         id
     } else {

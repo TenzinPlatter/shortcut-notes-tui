@@ -3,16 +3,15 @@ use chrono::Utc;
 use tokio::sync::mpsc;
 
 use crate::{
-    api::{iteration::Iteration, ApiClient},
+    api::{ApiClient, iteration::Iteration},
     app::{
+        App,
         model::{DataState, Model, UiState},
         msg::Msg,
-        App,
     },
     cache::Cache,
     config::Config,
-    get_api_key,
-    get_user_id,
+    get_api_key, get_user_id,
 };
 
 impl App {
@@ -59,7 +58,10 @@ impl App {
             };
 
             if let Some(stories) = saved_stories {
-                let _ = sender.send(Msg::StoriesLoaded { stories, from_cache: true });
+                let _ = sender.send(Msg::StoriesLoaded {
+                    stories,
+                    from_cache: true,
+                });
             }
 
             match api_client_clone
@@ -67,7 +69,10 @@ impl App {
                 .await
             {
                 Ok(stories) => {
-                    let _ = sender.send(Msg::StoriesLoaded { stories, from_cache: false });
+                    let _ = sender.send(Msg::StoriesLoaded {
+                        stories,
+                        from_cache: false,
+                    });
                 }
                 Err(e) => {
                     let _ = sender.send(Msg::Error(e.to_string()));

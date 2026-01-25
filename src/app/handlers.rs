@@ -4,9 +4,7 @@
 use std::io::Stdout;
 
 use anyhow::Result;
-use crossterm::{
-    event::{self, Event, KeyEventKind},
-};
+use crossterm::event::{self, Event, KeyEventKind};
 use ratatui::{Terminal, prelude::CrosstermBackend};
 use tokio::sync::mpsc::UnboundedSender;
 

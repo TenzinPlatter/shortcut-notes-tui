@@ -7,10 +7,7 @@ use ratatui::{
     widgets::{Block, List, ListState, StatefulWidget, WidgetRef},
 };
 
-use crate::{
-    api::story::Story,
-    app::model::StoryListState,
-};
+use crate::{api::story::Story, app::model::StoryListState};
 
 pub struct StoryListView<'a> {
     stories: &'a [Story],
@@ -19,11 +16,7 @@ pub struct StoryListView<'a> {
 }
 
 impl<'a> StoryListView<'a> {
-    pub fn new(
-        stories: &'a [Story],
-        state: &'a StoryListState,
-        is_focused: bool,
-    ) -> Self {
+    pub fn new(stories: &'a [Story], state: &'a StoryListState, is_focused: bool) -> Self {
         Self {
             stories,
             state,

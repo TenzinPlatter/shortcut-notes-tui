@@ -2,9 +2,7 @@ use anyhow::Result;
 use ratatui::{DefaultTerminal, Frame, widgets::FrameExt};
 use tokio::sync::mpsc;
 
-use crate::{
-    api::ApiClient, cache::Cache, config::Config
-};
+use crate::{api::ApiClient, cache::Cache, config::Config};
 
 #[cfg(any())]
 use crate::view::View;
@@ -91,28 +89,13 @@ impl App {
     }
 
     fn draw(&self, frame: &mut Frame) {
-        use ratatui::layout::{Constraint, Direction, Layout};
-        use crate::view::{epic::EpicView, story_list::StoryListView};
-
-        let chunks = Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints([
-                Constraint::Percentage(70),
-                Constraint::Percentage(30),
-            ])
-            .split(frame.area());
+        use crate::view::story_list::StoryListView;
 
         let story_list_view = StoryListView::new(
             &self.model.data.stories,
             &self.model.ui.story_list,
-            self.model.ui.focused_pane == model::PaneId::StoryList,
+            true,
         );
-        frame.render_widget_ref(story_list_view, chunks[0]);
-
-        let epic_view = EpicView::new(
-            &self.model.ui.epic_pane,
-            self.model.ui.focused_pane == model::PaneId::Epic,
-        );
-        frame.render_widget_ref(epic_view, chunks[1]);
+        frame.render_widget_ref(story_list_view, frame.area());
     }
 }

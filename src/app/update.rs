@@ -1,13 +1,7 @@
 use crossterm::event::KeyEvent;
 
 use crate::{
-    app::{
-        App,
-        cmd::Cmd,
-        model::PaneId,
-        msg::Msg,
-        pane::{epic, story_list},
-    },
+    app::{App, cmd::Cmd, msg::Msg, pane::story_list},
     dbg_file,
     keys::AppKey,
 };
@@ -24,24 +18,12 @@ impl App {
 
             Msg::KeyPressed(key_event) => self.handle_key_input(key_event),
 
-            Msg::FocusNextPane => {
-                self.model.ui.focus_next_pane();
-                vec![Cmd::None]
-            }
-
-            Msg::FocusPrevPane => {
-                self.model.ui.focus_prev_pane();
-                vec![Cmd::None]
-            }
-
             Msg::StoryList(story_msg) => story_list::update(
                 &mut self.model.ui.story_list,
                 &self.model.data.stories,
                 self.model.data.current_iteration.as_ref(),
                 story_msg,
             ),
-
-            Msg::Epic(epic_msg) => epic::update(&mut self.model.ui.epic_pane, epic_msg),
 
             Msg::StoriesLoaded {
                 stories,
@@ -88,22 +70,14 @@ impl App {
     }
 
     fn handle_key_input(&mut self, key: KeyEvent) -> Vec<Cmd> {
-        match key.code.try_into() {
-            Ok(AppKey::Quit) => return self.update(Msg::Quit),
-            Ok(AppKey::Left) => return self.update(Msg::FocusPrevPane),
-            Ok(AppKey::Right) => return self.update(Msg::FocusNextPane),
-            _ => {}
+        if let Ok(AppKey::Quit) = key.code.try_into() {
+            return self.update(Msg::Quit);
         }
 
-        match self.model.ui.focused_pane {
-            PaneId::StoryList => {
-                if let Some(msg) = story_list::key_to_msg(key) {
-                    self.update(Msg::StoryList(msg))
-                } else {
-                    vec![Cmd::None]
-                }
-            }
-            PaneId::Epic => vec![Cmd::None],
+        if let Some(msg) = story_list::key_to_msg(key) {
+            self.update(Msg::StoryList(msg))
+        } else {
+            vec![Cmd::None]
         }
     }
 }

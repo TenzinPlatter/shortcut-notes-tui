@@ -1,14 +1,20 @@
 use std::io::Stdout;
 
 use anyhow::Result;
-use crossterm::terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen};
 use crossterm::ExecutableCommand;
+use crossterm::terminal::{
+    EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode,
+};
 use ratatui::{Terminal, prelude::CrosstermBackend};
+use std::{
+    env,
+    fs::{OpenOptions, create_dir_all, read_to_string},
+    process::Command as ProcessCommand,
+};
 use tokio::sync::mpsc::UnboundedSender;
-use std::{env, fs::{create_dir_all, read_to_string, OpenOptions}, process::Command as ProcessCommand};
 
 use crate::{
-    api::{iteration::Iteration, story::Story, ApiClient},
+    api::{ApiClient, iteration::Iteration, story::Story},
     app::msg::Msg,
     cache::Cache,
     config::Config,
@@ -19,9 +25,14 @@ use crate::{
 #[derive(Debug, Clone)]
 pub enum Cmd {
     None,
-    OpenNote { story: Story, iteration: Option<Iteration> },
+    OpenNote {
+        story: Story,
+        iteration: Option<Iteration>,
+    },
     WriteCache,
-    FetchStories { iteration: Iteration },
+    FetchStories {
+        iteration: Iteration,
+    },
     FetchEpics,
     Batch(Vec<Cmd>),
 }
@@ -56,7 +67,12 @@ pub async fn execute(
             tokio::spawn(async move {
                 match api_client.get_owned_iteration_stories(&iteration).await {
                     Ok(stories) => {
-                        sender.send(Msg::StoriesLoaded { stories, from_cache: false }).ok();
+                        sender
+                            .send(Msg::StoriesLoaded {
+                                stories,
+                                from_cache: false,
+                            })
+                            .ok();
                     }
                     Err(e) => {
                         sender.send(Msg::Error(e.to_string())).ok();
@@ -73,7 +89,15 @@ pub async fn execute(
 
         Cmd::Batch(commands) => {
             for cmd in commands {
-                Box::pin(execute(cmd, sender.clone(), config, cache, api_client, terminal)).await?;
+                Box::pin(execute(
+                    cmd,
+                    sender.clone(),
+                    config,
+                    cache,
+                    api_client,
+                    terminal,
+                ))
+                .await?;
             }
             Ok(())
         }

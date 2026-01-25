@@ -45,12 +45,18 @@ impl ApiClient {
         }
     }
 
-    pub async fn get_owned_iteration_stories(&self, iteration: &Iteration) -> anyhow::Result<Vec<Story>> {
+    pub async fn get_owned_iteration_stories(
+        &self,
+        iteration: &Iteration,
+    ) -> anyhow::Result<Vec<Story>> {
         let response = self
             .get(&format!("iterations/{}/stories", iteration.id))
             .await?;
         let stories_slim = response.json::<Vec<StorySlim>>().await?;
-        let slim_owned: Vec<_> = stories_slim.iter().filter(|s| s.owner_ids.contains(&self.user_id)).collect();
+        let slim_owned: Vec<_> = stories_slim
+            .iter()
+            .filter(|s| s.owner_ids.contains(&self.user_id))
+            .collect();
 
         let stories = {
             let len = slim_owned.len();
@@ -62,7 +68,7 @@ impl ApiClient {
                     .await
                     .context("Failed to parse as Story")
             });
-            
+
             try_join_all(futures).await?
         };
 
