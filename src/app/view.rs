@@ -1,3 +1,5 @@
+#![cfg(any())]
+
 use ratatui::{
     buffer::Buffer,
     layout::{Direction, Rect},

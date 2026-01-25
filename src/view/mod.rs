@@ -1,26 +1,27 @@
+pub mod epic;
+pub mod story_list;
+
+#[cfg(any())]
+mod section;
+#[cfg(any())]
+mod view_builder;
+
+#[cfg(any())]
+pub use section::Pane;
+#[cfg(any())]
+pub use view_builder::ViewBuilder;
+
+#[cfg(any())]
 use ratatui::{
     buffer::Buffer,
     layout::{Direction, Layout, Rect},
     widgets::WidgetRef,
 };
 
-use crate::{
-    pane::Selectable,
-    keys::{AppKey, KeyHandler},
-};
+#[cfg(any())]
+use crate::keys::{AppKey, KeyHandler};
 
-pub mod epic;
-pub mod story_list;
-
-mod section;
-mod view_builder;
-
-pub use section::Pane;
-pub use view_builder::ViewBuilder;
-
-pub trait PaneTrait: WidgetRef + KeyHandler + Selectable + 'static {}
-impl<T: WidgetRef + KeyHandler + Selectable + 'static> PaneTrait for T {}
-
+#[cfg(any())]
 #[derive(Default)]
 pub struct View {
     panes: Vec<Pane>,
@@ -34,6 +35,7 @@ pub struct View {
     direction: Direction,
 }
 
+#[cfg(any())]
 impl View {
 
     
@@ -69,6 +71,7 @@ impl View {
     }
 }
 
+#[cfg(any())]
 impl Selectable for View {
     fn is_selected(&self) -> bool {
         self.is_selected
@@ -92,6 +95,7 @@ impl Selectable for View {
     }
 }
 
+#[cfg(any())]
 impl KeyHandler for View {
     fn handle_key_event(&mut self, key_event: crossterm::event::KeyEvent) -> bool {
         let consume_navigation = self.num_selectable_children() > 1;
@@ -121,6 +125,7 @@ impl KeyHandler for View {
     }
 }
 
+#[cfg(any())]
 impl WidgetRef for View {
     #[doc = " Draws the current state of the widget in the given buffer. That is the only method required"]
     #[doc = " to implement a custom widget."]

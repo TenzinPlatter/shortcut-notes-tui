@@ -6,13 +6,12 @@ use crate::{api::user::get_user_id_from_api, app::App};
 
 pub mod api;
 pub mod app;
+pub mod cache;
 pub mod config;
 pub mod keys;
-pub mod pane;
-pub mod view;
-pub mod cache;
 pub mod macros;
 pub mod note;
+pub mod view;
 
 pub async fn get_api_key() -> anyhow::Result<String> {
     std::env::var("SHORTCUT_API_TOKEN").context(

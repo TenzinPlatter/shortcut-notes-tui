@@ -1,3 +1,5 @@
+#![cfg(any())]
+
 use std::{
     env,
     fs::{OpenOptions, create_dir_all, read_to_string},

@@ -3,11 +3,16 @@ use ratatui::{DefaultTerminal, Frame, widgets::FrameExt};
 use tokio::sync::mpsc;
 
 use crate::{
-    api::ApiClient, cache::Cache, config::Config, view::View
+    api::ApiClient, cache::Cache, config::Config
 };
 
+#[cfg(any())]
+use crate::view::View;
+
 pub mod cmd;
+#[cfg(any())]
 pub mod events;
+#[cfg(any())]
 pub mod handlers;
 pub mod init;
 pub mod model;
@@ -16,6 +21,7 @@ pub mod pane;
 pub mod update;
 pub mod view;
 
+#[cfg(any())]
 pub use events::AppEvent;
 
 pub struct App {
@@ -24,6 +30,7 @@ pub struct App {
     pub receiver: mpsc::UnboundedReceiver<msg::Msg>,
     pub sender: mpsc::UnboundedSender<msg::Msg>,
     pub api_client: ApiClient,
+    #[cfg(any())]
     #[allow(dead_code)]
     pub view: View,
     #[allow(dead_code)]

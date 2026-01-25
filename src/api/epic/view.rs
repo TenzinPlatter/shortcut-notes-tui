@@ -1,3 +1,5 @@
+#![cfg(any())]
+
 use crate::{
     api::epic::Epic,
     pane::ParagraphPane,

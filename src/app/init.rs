@@ -32,8 +32,6 @@ impl App {
         let (sender, receiver) = mpsc::unbounded_channel();
         let sender_clone = sender.clone();
 
-        let view = Self::get_loading_view_iteration();
-
         let model = Model {
             data: DataState {
                 stories: cache.iteration_stories.clone().unwrap_or_default(),
@@ -83,7 +81,6 @@ impl App {
             receiver,
             sender: sender_clone,
             api_client,
-            view,
             config,
             cache,
         })
