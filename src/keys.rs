@@ -20,6 +20,8 @@ pub enum AppKey {
     ShowErrorDetails,
     Select,
     Edit,
+    Tab,
+    BackTab,
 }
 
 impl AppKey {
@@ -34,6 +36,8 @@ impl AppKey {
             AppKey::ShowErrorDetails => KeyCode::Char('d'),
             AppKey::Select => KeyCode::Char(' '),
             AppKey::Edit => KeyCode::Enter,
+            AppKey::Tab => KeyCode::Tab,
+            AppKey::BackTab => KeyCode::BackTab,
         }
     }
 }
@@ -51,6 +55,8 @@ impl TryFrom<KeyCode> for AppKey {
             KeyCode::Char('d') => Ok(AppKey::ShowErrorDetails),
             KeyCode::Char(' ') => Ok(AppKey::Select),
             KeyCode::Enter => Ok(AppKey::Edit),
+            KeyCode::Tab => Ok(AppKey::Tab),
+            KeyCode::BackTab => Ok(AppKey::BackTab),
             _ => Err(()),
         }
     }

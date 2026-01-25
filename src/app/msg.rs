@@ -1,6 +1,7 @@
 use crossterm::event::KeyEvent;
 
 use crate::api::{epic::Epic, iteration::Iteration, story::Story};
+use crate::app::model::ViewType;
 
 #[derive(Debug, Clone)]
 pub enum Msg {
@@ -12,6 +13,7 @@ pub enum Msg {
     },
     EpicsLoaded(Vec<Epic>),
     IterationLoaded(Iteration),
+    SwitchToView(ViewType),
     NoteOpened,
     CacheWritten,
     Error(String),

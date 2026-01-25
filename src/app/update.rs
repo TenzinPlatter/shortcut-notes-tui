@@ -59,6 +59,11 @@ impl App {
                 vec![Cmd::WriteCache, Cmd::FetchStories { iteration }]
             }
 
+            Msg::SwitchToView(view_type) => {
+                self.model.ui.active_view = view_type;
+                vec![Cmd::None]
+            }
+
             Msg::NoteOpened => vec![Cmd::None],
             Msg::CacheWritten => vec![Cmd::None],
 
@@ -70,10 +75,24 @@ impl App {
     }
 
     fn handle_key_input(&mut self, key: KeyEvent) -> Vec<Cmd> {
-        if let Ok(AppKey::Quit) = key.code.try_into() {
-            return self.update(Msg::Quit);
+        match key.code.try_into() {
+            Ok(AppKey::Quit) => return self.update(Msg::Quit),
+
+            // View switching (Tab/Shift+Tab)
+            Ok(AppKey::Tab) => {
+                let next_view = self.model.ui.active_view.next();
+                return self.update(Msg::SwitchToView(next_view));
+            }
+            Ok(AppKey::BackTab) => {
+                let prev_view = self.model.ui.active_view.prev();
+                return self.update(Msg::SwitchToView(prev_view));
+            }
+
+            _ => {}
         }
 
+        // Route to active view's key handler
+        // For now, only story_list handles keys
         if let Some(msg) = story_list::key_to_msg(key) {
             self.update(Msg::StoryList(msg))
         } else {
