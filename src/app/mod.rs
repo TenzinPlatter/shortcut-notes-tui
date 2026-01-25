@@ -89,13 +89,40 @@ impl App {
     }
 
     fn draw(&self, frame: &mut Frame) {
-        use crate::view::story_list::StoryListView;
+        use crate::view::{navbar::NavBar, story_list::StoryListView};
+        use ratatui::layout::{Constraint, Direction, Layout};
+        use ratatui::widgets::{Block, Paragraph};
 
-        let story_list_view = StoryListView::new(
-            &self.model.data.stories,
-            &self.model.ui.story_list,
-            true,
-        );
-        frame.render_widget_ref(story_list_view, frame.area());
+        // Split screen: navbar at top, main view below
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(3),  // Navbar: border + content + border
+                Constraint::Min(0),      // Main view: everything else
+            ])
+            .split(frame.area());
+
+        // Render navbar
+        let navbar = NavBar::new(self.model.ui.active_view);
+        frame.render_widget_ref(navbar, chunks[0]);
+
+        // Render main view based on active_view
+        match self.model.ui.active_view {
+            crate::app::model::ViewType::Iteration => {
+                let story_list_view = StoryListView::new(
+                    &self.model.data.stories,
+                    &self.model.ui.story_list,
+                    true,  // Always focused (single view)
+                );
+                frame.render_widget_ref(story_list_view, chunks[1]);
+            }
+            crate::app::model::ViewType::Epics
+            | crate::app::model::ViewType::Notes
+            | crate::app::model::ViewType::Search => {
+                // Placeholder for future views
+                let placeholder = Paragraph::new("Coming soon...").block(Block::bordered());
+                frame.render_widget(placeholder, chunks[1]);
+            }
+        }
     }
 }
