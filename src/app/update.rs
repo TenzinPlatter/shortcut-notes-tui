@@ -2,11 +2,11 @@ use crossterm::event::KeyEvent;
 
 use crate::{
     app::{
+        App,
         cmd::Cmd,
         model::PaneId,
         msg::Msg,
         pane::{epic, story_list},
-        App,
     },
     dbg_file,
     keys::AppKey,
@@ -41,11 +41,12 @@ impl App {
                 story_msg,
             ),
 
-            Msg::Epic(epic_msg) => {
-                epic::update(&mut self.model.ui.epic_pane, epic_msg)
-            }
+            Msg::Epic(epic_msg) => epic::update(&mut self.model.ui.epic_pane, epic_msg),
 
-            Msg::StoriesLoaded { stories, from_cache } => {
+            Msg::StoriesLoaded {
+                stories,
+                from_cache,
+            } => {
                 if !from_cache
                     && self
                         .model

@@ -55,13 +55,13 @@ pub fn update(
         }
 
         StoryListMsg::OpenNote => {
-            if let Some(idx) = state.selected_index {
-                if let Some(story) = stories.get(idx) {
-                    return vec![Cmd::OpenNote {
-                        story: story.clone(),
-                        iteration: current_iteration.cloned(),
-                    }];
-                }
+            if let Some(idx) = state.selected_index
+                && let Some(story) = stories.get(idx)
+            {
+                return vec![Cmd::OpenNote {
+                    story: story.clone(),
+                    iteration: current_iteration.cloned(),
+                }];
             }
             vec![Cmd::None]
         }
