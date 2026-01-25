@@ -2,7 +2,7 @@ use anyhow::Result;
 use ratatui::{DefaultTerminal, Frame, widgets::FrameExt};
 use tokio::sync::mpsc;
 
-use crate::{api::ApiClient, cache::Cache, config::Config};
+use crate::{api::ApiClient, app::model::ViewType, cache::Cache, config::Config};
 
 #[cfg(any())]
 use crate::view::View;
@@ -18,9 +18,6 @@ pub mod msg;
 pub mod pane;
 pub mod update;
 pub mod view;
-
-#[cfg(any())]
-pub use events::AppEvent;
 
 pub struct App {
     pub model: model::Model,
@@ -108,7 +105,7 @@ impl App {
 
         // Render main view based on active_view
         match self.model.ui.active_view {
-            crate::app::model::ViewType::Iteration => {
+            ViewType::Iteration => {
                 let story_list_view = StoryListView::new(
                     &self.model.data.stories,
                     &self.model.ui.story_list,
@@ -116,9 +113,9 @@ impl App {
                 );
                 frame.render_widget_ref(story_list_view, chunks[1]);
             }
-            crate::app::model::ViewType::Epics
-            | crate::app::model::ViewType::Notes
-            | crate::app::model::ViewType::Search => {
+            ViewType::Epics
+            | ViewType::Notes
+            | ViewType::Search => {
                 // Placeholder for future views
                 let placeholder = Paragraph::new("Coming soon...").block(Block::bordered());
                 frame.render_widget(placeholder, chunks[1]);

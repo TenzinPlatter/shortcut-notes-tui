@@ -9,10 +9,10 @@ use crate::{
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ViewType {
     #[default]
-    Iteration,  // Current default: story list
-    Epics,      // Future: browse all epics
-    Notes,      // Future: browse notes directory
-    Search,     // Future: search across stories/notes
+    Iteration, // Current default: story list
+    Epics,  // Future: browse all epics
+    Notes,  // Future: browse notes directory
+    Search, // Future: search across stories/notes
 }
 
 impl ViewType {
@@ -64,8 +64,17 @@ pub struct UiState {
     pub story_list: StoryListState,
 }
 
-#[derive(Default, Clone)]
+#[derive(Clone)]
 pub struct StoryListState {
     pub selected_index: Option<usize>,
     pub expanded_items: HashSet<usize>,
+}
+
+impl Default for StoryListState {
+    fn default() -> Self {
+        Self {
+            selected_index: Some(0),
+            expanded_items: Default::default(),
+        }
+    }
 }
