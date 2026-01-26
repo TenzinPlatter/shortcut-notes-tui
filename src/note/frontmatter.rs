@@ -1,4 +1,4 @@
-use chrono::{Datelike, NaiveDate, Utc};
+use chrono::{Datelike, NaiveDate, Timelike, Utc};
 use serde::{Deserialize, Serialize};
 use slugify::slugify;
 
@@ -46,7 +46,15 @@ impl Frontmatter {
     pub fn new(story: &Story, current_iteration: Option<&Iteration>) -> Self {
         let slug = slugify!(&story.name);
         let now = Utc::now();
-        let slug_id = format!("{}-{}", now.day(), &slug);
+        let slug_id = format!(
+            "{}{}{}{}-{}",
+            now.day(),
+            now.hour(),
+            now.minute(),
+            now.second(),
+            &slug
+        );
+
         let iteration_link = current_iteration.map(|it| it.app_url.clone());
 
         Self {
