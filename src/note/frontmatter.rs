@@ -2,7 +2,7 @@ use chrono::{Datelike, NaiveDate, Timelike, Utc};
 use serde::{Deserialize, Serialize};
 use slugify::slugify;
 
-use crate::api::{iteration::Iteration, story::Story};
+use crate::api::{epic::Epic, iteration::Iteration, story::Story};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub enum NoteType {

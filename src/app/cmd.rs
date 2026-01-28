@@ -108,6 +108,7 @@ pub async fn execute(
             for cmd in commands {
                 Box::pin(execute(cmd, sender.clone(), model, api_client, terminal)).await?;
             }
+
             Ok(())
         }
     }

@@ -3,8 +3,6 @@ use uuid::Uuid;
 
 use crate::api::ApiClient;
 
-pub mod view;
-
 #[derive(Deserialize)]
 pub struct EpicSlim {
     pub id: i32,
@@ -14,6 +12,7 @@ pub struct EpicSlim {
 #[derive(Deserialize, Debug, Clone)]
 pub struct Epic {
     pub id: i32,
+    pub app_url: String,
     pub completed: bool,
     pub description: String,
     pub name: String,
