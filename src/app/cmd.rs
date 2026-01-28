@@ -49,12 +49,13 @@ pub async fn execute(
         Cmd::None => Ok(()),
 
         Cmd::OpenNote { story, iteration } => {
-            open_note_in_editor(story, iteration, config, terminal)?;
-            sender.send(Msg::NoteOpened).ok();
+            open_note_in_editor_tui(story.clone(), iteration, config, terminal)?;
+            sender.send(Msg::NoteOpened(story)).ok();
             Ok(())
         }
 
         Cmd::WriteCache => {
+            dbg_file!("Writing cache with: {:?}", cache.current_story);
             cache.write()?;
             sender.send(Msg::CacheWritten).ok();
             Ok(())
@@ -104,12 +105,11 @@ pub async fn execute(
     }
 }
 
-fn open_note_in_editor(
+pub fn open_note_in_editor(
     story: Story,
     iteration: Option<Iteration>,
     config: &Config,
-    terminal: &mut Terminal<CrosstermBackend<Stdout>>,
-) -> Result<()> {
+) -> anyhow::Result<()> {
     let note = Note::new(&config.notes_dir, &story, iteration.as_ref());
 
     let editor = env::var("EDITOR").unwrap_or("nvim".to_string());
@@ -136,14 +136,25 @@ fn open_note_in_editor(
         note.write_frontmatter(&mut f)?;
     }
 
+    ProcessCommand::new(editor).arg(note.path).status()?;
+
+    Ok(())
+}
+
+pub fn open_note_in_editor_tui(
+    story: Story,
+    iteration: Option<Iteration>,
+    config: &Config,
+    terminal: &mut Terminal<CrosstermBackend<Stdout>>,
+) -> anyhow::Result<()> {
     std::io::stdout().execute(LeaveAlternateScreen)?;
     disable_raw_mode()?;
 
-    ProcessCommand::new(editor).arg(note.path).status()?;
+    let result = open_note_in_editor(story, iteration, config);
 
     std::io::stdout().execute(EnterAlternateScreen)?;
     enable_raw_mode()?;
     terminal.clear()?;
 
-    Ok(())
+    result
 }

@@ -2,7 +2,7 @@ use anyhow::Result;
 use ratatui::{DefaultTerminal, Frame, widgets::FrameExt};
 use tokio::sync::mpsc;
 
-use crate::{api::ApiClient, app::model::ViewType, cache::Cache, config::Config};
+use crate::{api::ApiClient, app::model::ViewType, config::Config};
 
 pub mod cmd;
 pub mod init;
@@ -18,7 +18,6 @@ pub struct App {
     pub sender: mpsc::UnboundedSender<msg::Msg>,
     pub api_client: ApiClient,
     pub config: Config,
-    pub cache: Cache,
 }
 
 impl App {

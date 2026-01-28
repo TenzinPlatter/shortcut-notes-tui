@@ -1,14 +1,18 @@
 [package]
-name = "shortcut-notes-tui"
+name = "shortcut-notes"
 version = "0.1.0"
-description = "A keyboard first Github TUI"
-authors = ["Tenzin Platter <143778894+TenzinPlatter@users.noreply.github.com>"]
-license = "MIT"
 edition = "2024"
+description = "A TUI to manage notes with Shorcut project management integration"
+license = "MIT"
+
+[[bin]]
+name = "note"
+path = "src/main.rs"
 
 [dependencies]
 anyhow = "1.0.100"
 chrono = { version = "0.4.43", features = ["serde"] }
+clap = { version = "4.5.55", features = ["derive"] }
 color-eyre = "0.6.3"
 confy = "2.0.0"
 crossterm = "0.29.0"
@@ -22,11 +26,10 @@ slugify = "0.1.0"
 subprocess = "0.2.13"
 tokio = { version = "1.49.0", features = ["full"] }
 toml = "0.9.11"
-uuid = { version = "1.19.0", features = ["v4", "serde"] }
+uuid = { version = "1.19.0", features = ["serde", "v4"] }
 
-# Read the optimization guideline for more details: https://ratatui.rs/recipes/apps/release-your-app/#optimizations
 [profile.release]
-codegen-units = 1
-lto = true
 opt-level = "s"
 strip = true
+lto = true
+codegen-units = 1

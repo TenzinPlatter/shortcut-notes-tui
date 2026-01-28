@@ -1,9 +1,7 @@
 use crossterm::event::KeyEvent;
 
 use crate::{
-    app::{App, cmd::Cmd, msg::Msg, pane::story_list},
-    dbg_file,
-    keys::AppKey,
+    api::story, app::{cmd::Cmd, msg::Msg, pane::story_list, App}, dbg_file, keys::AppKey
 };
 
 impl App {
@@ -65,7 +63,11 @@ impl App {
                 vec![Cmd::None]
             }
 
-            Msg::NoteOpened => vec![Cmd::None],
+            Msg::NoteOpened(story) => {
+                // TODO: also update the UI
+                self.model.cache.current_story = Some(story);
+                vec![Cmd::WriteCache]
+            },
             Msg::CacheWritten => vec![Cmd::None],
 
             Msg::Error(e) => {

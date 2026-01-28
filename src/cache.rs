@@ -17,6 +17,7 @@ use crate::{
 pub struct Cache {
     pub current_iteration: Option<Iteration>,
     pub iteration_stories: Option<Vec<Story>>,
+    pub current_story: Option<Story>,
     pub user_id: Option<Uuid>,
     pub cache_dir: PathBuf,
 }
@@ -27,6 +28,7 @@ impl Default for Cache {
             current_iteration: Default::default(),
             iteration_stories: Default::default(),
             user_id: Default::default(),
+            current_story: Default::default(),
             cache_dir: Self::default_cache_dir(),
         }
     }

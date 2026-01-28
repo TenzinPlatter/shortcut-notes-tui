@@ -14,7 +14,7 @@ pub enum Msg {
     EpicsLoaded(Vec<Epic>),
     IterationLoaded(Iteration),
     SwitchToView(ViewType),
-    NoteOpened,
+    NoteOpened(Story),
     CacheWritten,
     Error(String),
     Quit,

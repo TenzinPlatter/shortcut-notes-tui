@@ -38,12 +38,12 @@ impl App {
             },
             ui: UiState::default(),
             config: config.clone(),
-            cache: cache.clone(),
+            cache,
         };
 
         let api_client_clone = api_client.clone();
-        let saved_iteration = cache.current_iteration.clone();
-        let saved_stories = cache.iteration_stories.clone();
+        let saved_iteration = model.cache.current_iteration.clone();
+        let saved_stories = model.cache.iteration_stories.clone();
         tokio::spawn(async move {
             let iteration = match get_current_iteration(saved_iteration, &api_client_clone).await {
                 Ok(it) => {
@@ -86,7 +86,6 @@ impl App {
             sender: sender_clone,
             api_client,
             config,
-            cache,
         })
     }
 }
