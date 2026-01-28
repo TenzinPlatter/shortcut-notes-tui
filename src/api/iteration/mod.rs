@@ -72,6 +72,8 @@ impl ApiClient {
             try_join_all(futures).await?
         };
 
-        Ok(stories)
+        let stories_unfinished = stories.into_iter().filter(|s| !s.completed).collect();
+
+        Ok(stories_unfinished)
     }
 }

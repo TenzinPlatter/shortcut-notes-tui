@@ -1,5 +1,5 @@
 use anyhow::Context;
-use ratatui::{style::{Color, Style}, text::Line, widgets::ListItem};
+use ratatui::{style::Style, text::Line, widgets::ListItem};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
