@@ -2,8 +2,6 @@ use std::fmt::Display;
 
 use crossterm::event::{KeyCode, KeyEvent};
 
-use crate::app::App;
-
 pub trait KeyHandler {
     /// Handle a key event. Returns whether the event was consumed by the handler, i.e. whether
     /// further processing should be stopped.
@@ -25,6 +23,7 @@ pub enum AppKey {
     Tab,
     BackTab,
     SetActive,
+    TmuxEnter,
 }
 
 impl AppKey {
@@ -42,6 +41,7 @@ impl AppKey {
             AppKey::Tab => KeyCode::Tab,
             AppKey::BackTab => KeyCode::BackTab,
             AppKey::SetActive => KeyCode::Char('a'),
+            AppKey::TmuxEnter => KeyCode::Char('t'),
         }
     }
 }
@@ -62,6 +62,7 @@ impl TryFrom<KeyCode> for AppKey {
             KeyCode::Tab => Ok(AppKey::Tab),
             KeyCode::BackTab => Ok(AppKey::BackTab),
             KeyCode::Char('a') => Ok(AppKey::SetActive),
+            KeyCode::Char('t') => Ok(AppKey::TmuxEnter),
             _ => Err(()),
         }
     }

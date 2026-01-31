@@ -1,7 +1,11 @@
 use crossterm::event::KeyEvent;
+use slugify::slugify;
 
 use crate::{
-    api::{iteration::Iteration, story::Story}, app::{cmd::Cmd, msg::StoryListMsg}, dbg_file, keys::AppKey
+    api::{iteration::Iteration, story::Story},
+    app::{cmd::Cmd, msg::StoryListMsg},
+    dbg_file,
+    keys::AppKey,
 };
 
 pub use crate::app::model::StoryListState;
@@ -67,6 +71,17 @@ pub fn update(
             dbg_file!("Setting story: {:?} to active", story);
             vec![Cmd::SelectStory(story), Cmd::WriteCache]
         }
+
+        StoryListMsg::TmuxEnter => {
+            if let Some(story) = get_selected_story(state, stories) {
+                let story_slug = slugify!(&story.name);
+                let session_name = format!("scn--{}", story_slug);
+                dbg_file!("'{}'", session_name);
+                vec![Cmd::OpenTmuxSession(session_name)]
+            } else {
+                vec![Cmd::None]
+            }
+        }
     }
 }
 
@@ -85,6 +100,7 @@ pub fn key_to_msg(key: KeyEvent) -> Option<StoryListMsg> {
         Ok(AppKey::Select) => Some(StoryListMsg::ToggleExpand),
         Ok(AppKey::Edit) => Some(StoryListMsg::OpenNote),
         Ok(AppKey::SetActive) => Some(StoryListMsg::SelectStory),
+        Ok(AppKey::TmuxEnter) => Some(StoryListMsg::TmuxEnter),
         _ => None,
     }
 }

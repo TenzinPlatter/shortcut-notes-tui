@@ -27,4 +27,5 @@ pub enum StoryListMsg {
     ToggleExpand,
     OpenNote,
     SelectStory,
+    TmuxEnter,
 }

@@ -14,10 +14,10 @@ use std::{
 use tokio::sync::mpsc::UnboundedSender;
 
 use crate::app::model::Model;
+use crate::tmux::{session_attach, session_create, session_detach};
 use crate::{
     api::{ApiClient, iteration::Iteration, story::Story},
     app::msg::Msg,
-    cache::Cache,
     config::Config,
     dbg_file,
     note::Note,
@@ -36,6 +36,7 @@ pub enum Cmd {
     },
     FetchEpics,
     SelectStory(Option<Story>),
+    OpenTmuxSession(String),
     Batch(Vec<Cmd>),
 }
 
@@ -108,6 +109,13 @@ pub async fn execute(
             for cmd in commands {
                 Box::pin(execute(cmd, sender.clone(), model, api_client, terminal)).await?;
             }
+
+            Ok(())
+        }
+
+        Cmd::OpenTmuxSession(name) => {
+            session_create(&name).await?;
+            session_attach(&name).await?;
 
             Ok(())
         }
