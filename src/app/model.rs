@@ -68,7 +68,7 @@ impl UiState {
         Self {
             active_view: Default::default(),
             story_list: StoryListState {
-                selected_index: Default::default(),
+                selected_index: Some(0),
                 expanded_items: Default::default(),
                 active_story,
             },
