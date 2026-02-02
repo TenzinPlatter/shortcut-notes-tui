@@ -5,7 +5,7 @@ use crate::{
     api::user::get_user_id_from_api,
     app::{
         App,
-        cmd::{self, Cmd, open_note_in_editor, open_tmux_session},
+        cmd::{open_note_in_editor, open_tmux_session},
     },
     cache::Cache,
     cli::Commands,

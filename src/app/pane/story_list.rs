@@ -1,5 +1,4 @@
 use crossterm::event::KeyEvent;
-use slugify::slugify;
 
 use crate::{
     api::{iteration::Iteration, story::Story},

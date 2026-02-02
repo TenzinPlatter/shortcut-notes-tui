@@ -87,11 +87,10 @@ impl<T: ListRow> StatefulWidget for CustomList<'_, T> {
         let divider_height = if self.divider.is_some() { 1 } else { 0 };
 
         // Bounds checking: ensure selected index is valid
-        if let Some(selected) = state.selected {
-            if selected >= self.items.len() {
+        if let Some(selected) = state.selected
+            && selected >= self.items.len() {
                 state.selected = Some(self.items.len().saturating_sub(1));
             }
-        }
 
         // Calculate cumulative heights to determine scroll offset
         if let Some(selected) = state.selected {
@@ -186,13 +185,12 @@ impl<T: ListRow> StatefulWidget for CustomList<'_, T> {
             y += item_height;
 
             // Render divider if not last item and there's room
-            if let Some(ref divider) = self.divider {
-                if i < self.items.len() - 1 && y < area.y + area.height {
+            if let Some(ref divider) = self.divider
+                && i < self.items.len() - 1 && y < area.y + area.height {
                     // Render divider line
                     buf.set_line(area.x, y, divider, area.width);
                     y += 1;
                 }
-            }
         }
     }
 }

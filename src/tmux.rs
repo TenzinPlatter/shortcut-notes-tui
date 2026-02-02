@@ -1,4 +1,4 @@
-use std::{env, fs::set_permissions, process::Output};
+use std::{env, process::Output};
 
 use tokio::process::Command;
 

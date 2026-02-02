@@ -1,7 +1,7 @@
 use crossterm::event::KeyEvent;
 
 use crate::{
-    api::story, app::{cmd::Cmd, msg::Msg, pane::story_list, App}, dbg_file, keys::AppKey
+    app::{cmd::Cmd, msg::Msg, pane::story_list, App}, dbg_file, keys::AppKey
 };
 
 impl App {

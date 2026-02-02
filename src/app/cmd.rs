@@ -14,7 +14,7 @@ use std::{
 use tokio::sync::mpsc::UnboundedSender;
 
 use crate::app::model::Model;
-use crate::tmux::{session_attach, session_create, session_detach};
+use crate::tmux::{session_attach, session_create};
 use crate::{
     api::{ApiClient, iteration::Iteration, story::Story},
     app::msg::Msg,
