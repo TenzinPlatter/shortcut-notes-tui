@@ -114,9 +114,7 @@ pub async fn execute(
         }
 
         Cmd::OpenTmuxSession(name) => {
-            session_create(&name).await?;
-            session_attach(&name).await?;
-
+            open_tmux_session(&name).await?;
             Ok(())
         }
     }
@@ -174,4 +172,10 @@ pub fn open_note_in_editor_tui(
     terminal.clear()?;
 
     result
+}
+
+pub async fn open_tmux_session(name: &str) -> anyhow::Result<()> {
+    session_create(name).await?;
+    session_attach(name).await?;
+    Ok(())
 }

@@ -74,8 +74,7 @@ pub fn update(
 
         StoryListMsg::TmuxEnter => {
             if let Some(story) = get_selected_story(state, stories) {
-                let story_slug = slugify!(&story.name);
-                let session_name = format!("scn--{}", story_slug);
+                let session_name = story.tmux_session_name();
                 dbg_file!("'{}'", session_name);
                 vec![Cmd::OpenTmuxSession(session_name)]
             } else {

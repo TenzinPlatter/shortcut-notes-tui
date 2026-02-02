@@ -8,7 +8,9 @@ async fn main() -> anyhow::Result<()> {
         let config = Config::read()?;
         let cache = Cache::read(config.cache_dir.clone());
 
-        return shortcut_notes::handle_command(cmd, cache, config);
+        shortcut_notes::handle_command(cmd, cache, config).await?;
+
+        return Ok(());
     }
 
     // need to do the ratatui stuff manually since we are using await in the main

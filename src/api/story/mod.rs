@@ -1,4 +1,5 @@
 use anyhow::Context;
+use slugify::slugify;
 use ratatui::{style::Style, text::Line, widgets::ListItem};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -60,6 +61,11 @@ impl ApiClient {
 }
 
 impl Story {
+    pub fn tmux_session_name(&self) -> String {
+        let story_slug = slugify!(&self.name);
+        format!("scn--{}", story_slug)
+    }
+
     pub fn into_list_item(&self, expanded: bool, selected: bool) -> ListItem<'static> {
         let mut text = vec![
             Line::from(self.name.to_string()),

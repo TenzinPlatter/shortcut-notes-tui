@@ -5,7 +5,7 @@ use crate::{
     api::user::get_user_id_from_api,
     app::{
         App,
-        cmd::{self, Cmd, open_note_in_editor},
+        cmd::{self, Cmd, open_note_in_editor, open_tmux_session},
     },
     cache::Cache,
     cli::Commands,
@@ -40,13 +40,19 @@ pub async fn run(terminal: &mut DefaultTerminal) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub fn handle_command(command: Commands, cache: Cache, config: Config) -> anyhow::Result<()> {
+pub async fn handle_command(command: Commands, cache: Cache, config: Config) -> anyhow::Result<()> {
     match command {
         Commands::Open => {
             if let Some(story) = cache.active_story {
                 open_note_in_editor(story, cache.current_iteration, &config)?;
             } else {
                 anyhow::bail!("You do not have a currently active story");
+            }
+        }
+
+        Commands::Tmux => {
+            if let Some(story) = cache.active_story {
+                open_tmux_session(&story.tmux_session_name()).await?;
             }
         }
     }

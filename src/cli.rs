@@ -12,4 +12,7 @@ pub struct Cli {
 pub enum Commands {
     #[command(alias = "o")]
     Open,
+
+    #[command(alias = "t")]
+    Tmux,
 }
