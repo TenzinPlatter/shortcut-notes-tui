@@ -23,6 +23,7 @@ serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 serde_yaml = "0.9.34"
 shellexpand = "3.1.1"
+textwrap = "0.16"
 slugify = "0.1.0"
 subprocess = "0.2.13"
 tokio = { version = "1.49.0", features = ["full"] }

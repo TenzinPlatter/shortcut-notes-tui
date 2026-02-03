@@ -4,7 +4,7 @@ use ratatui::widgets::{Block, Clear, Paragraph, WidgetRef};
 use ratatui::{DefaultTerminal, Frame, widgets::FrameExt};
 use tokio::sync::mpsc;
 
-use crate::error::ERROR_NOTIFICATION_WINDOW_HEIGHT;
+use crate::error::ERROR_NOTIFICATION_MAX_HEIGHT;
 use crate::view::{navbar::NavBar, story_list::StoryListView};
 use crate::{api::ApiClient, app::model::ViewType, config::Config};
 
@@ -117,12 +117,13 @@ impl App {
 
         let error_info = self.model.ui.error_info.as_ref().unwrap().clone();
         let width = error_info.get_required_width();
+        let height = error_info.get_required_height(width);
         let area = frame.area();
         let area = Rect::new(
             area.width - width,
             0,
             width,
-            ERROR_NOTIFICATION_WINDOW_HEIGHT,
+            height.min(ERROR_NOTIFICATION_MAX_HEIGHT),
         );
 
         // clear terminal area, stops characters behind empty space from being visible

@@ -24,6 +24,7 @@ pub mod tmux;
 pub mod view;
 pub mod error;
 pub mod dummy;
+pub mod text_utils;
 
 pub async fn get_user_id(saved_user_id: Option<Uuid>, api_token: &str) -> anyhow::Result<Uuid> {
     let id = if let Some(id) = saved_user_id {

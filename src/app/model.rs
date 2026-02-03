@@ -69,7 +69,7 @@ impl UiState {
     pub fn new(active_story: Option<Story>) -> UiState {
         Self {
             active_view: Default::default(),
-            error_info: None,
+            error_info: Default::default(),
             story_list: StoryListState {
                 selected_index: Some(0),
                 expanded_items: Default::default(),
