@@ -2,7 +2,7 @@ use ratatui::DefaultTerminal;
 use uuid::Uuid;
 
 use crate::{
-    api::user::get_user_id_from_api,
+    api::{story::Story, user::get_user_id_from_api},
     app::{
         App,
         cmd::{open_note_in_editor, open_tmux_session},
@@ -17,14 +17,14 @@ pub mod app;
 pub mod cache;
 pub mod cli;
 pub mod config;
+pub mod dummy;
+pub mod error;
 pub mod keys;
 pub mod macros;
 pub mod note;
+pub mod text_utils;
 pub mod tmux;
 pub mod view;
-pub mod error;
-pub mod dummy;
-pub mod text_utils;
 
 pub async fn get_user_id(saved_user_id: Option<Uuid>, api_token: &str) -> anyhow::Result<Uuid> {
     let id = if let Some(id) = saved_user_id {
@@ -54,8 +54,9 @@ pub async fn handle_command(command: Commands, cache: Cache, config: Config) -> 
         }
 
         Commands::Tmux => {
-            if let Some(story) = cache.active_story {
-                open_tmux_session(&story.tmux_session_name()).await?;
+            if let Some(story) = &cache.active_story {
+                let session_name = Story::tmux_session_name(&story.name);
+                open_tmux_session(&session_name).await?;
             }
         }
     }

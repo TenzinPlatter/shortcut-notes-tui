@@ -8,6 +8,7 @@ use crate::error::ErrorInfo;
 pub enum Msg {
     KeyPressed(KeyEvent),
     StoryList(StoryListMsg),
+    ActionMenu(ActionMenuMsg),
     StoriesLoaded {
         stories: Vec<Story>,
         from_cache: bool,
@@ -16,6 +17,7 @@ pub enum Msg {
     IterationLoaded(Iteration),
     SwitchToView(ViewType),
     NoteOpened,
+    ToggleActionMenu,
     CacheWritten,
     Error(ErrorInfo),
     Quit,
@@ -23,11 +25,18 @@ pub enum Msg {
 
 #[derive(Debug, Clone, Copy)]
 pub enum StoryListMsg {
-    SelectNext,
-    SelectPrev,
+    FocusNext,
+    FocusPrev,
     ToggleExpand,
     OpenNote,
     SelectStory,
     TmuxEnter,
     EditStoryContents,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum ActionMenuMsg {
+    FocusNext,
+    FocusPrev,
+    Accept,
 }

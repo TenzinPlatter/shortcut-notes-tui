@@ -16,7 +16,7 @@ pub fn update(
     msg: StoryListMsg,
 ) -> Vec<Cmd> {
     match msg {
-        StoryListMsg::SelectNext => {
+        StoryListMsg::FocusNext => {
             if stories.is_empty() {
                 return vec![Cmd::None];
             }
@@ -30,7 +30,7 @@ pub fn update(
             vec![Cmd::None]
         }
 
-        StoryListMsg::SelectPrev => {
+        StoryListMsg::FocusPrev => {
             if stories.is_empty() {
                 return vec![Cmd::None];
             }
@@ -73,9 +73,9 @@ pub fn update(
 
         StoryListMsg::TmuxEnter => {
             if let Some(story) = get_selected_story(state, stories) {
-                let session_name = story.tmux_session_name();
-                dbg_file!("'{}'", session_name);
-                vec![Cmd::OpenTmuxSession(session_name)]
+                vec![Cmd::OpenTmuxSession {
+                    story_name: story.name.clone(),
+                }]
             } else {
                 vec![Cmd::None]
             }
@@ -101,8 +101,8 @@ fn get_selected_story(state: &StoryListState, stories: &[Story]) -> Option<Story
 
 pub fn key_to_msg(key: KeyEvent) -> Option<StoryListMsg> {
     match key.code.try_into() {
-        Ok(AppKey::Down) => Some(StoryListMsg::SelectNext),
-        Ok(AppKey::Up) => Some(StoryListMsg::SelectPrev),
+        Ok(AppKey::Down) => Some(StoryListMsg::FocusNext),
+        Ok(AppKey::Up) => Some(StoryListMsg::FocusPrev),
         Ok(AppKey::Select) => Some(StoryListMsg::ToggleExpand),
         Ok(AppKey::Edit) => Some(StoryListMsg::OpenNote),
         Ok(AppKey::SetActive) => Some(StoryListMsg::SelectStory),

@@ -1,9 +1,10 @@
 use anyhow::Result;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
-use ratatui::widgets::{Block, Clear, Paragraph, WidgetRef};
+use ratatui::widgets::{Block, Clear, Paragraph, StatefulWidget, Widget, WidgetRef};
 use ratatui::{DefaultTerminal, Frame, widgets::FrameExt};
 use tokio::sync::mpsc;
 
+use crate::app::pane::action_menu::ActionMenu;
 use crate::error::ERROR_NOTIFICATION_MAX_HEIGHT;
 use crate::view::{navbar::NavBar, story_list::StoryListView};
 use crate::{api::ApiClient, app::model::ViewType, config::Config};
@@ -74,7 +75,7 @@ impl App {
         }
     }
 
-    fn draw(&self, frame: &mut Frame) {
+    fn draw(&mut self, frame: &mut Frame) {
         // Split screen: navbar at top, main view below
         let chunks = Layout::default()
             .direction(Direction::Vertical)
@@ -105,6 +106,20 @@ impl App {
                 let placeholder = Paragraph::new("Coming soon...").block(Block::bordered());
                 frame.render_widget(placeholder, chunks[1]);
             }
+        }
+
+        if self.model.ui.action_menu.is_showing {
+            let width: u16 = (frame.area().width as f32 * 0.4) as u16;
+            let height: u16 = (frame.area().height as f32 * 0.8) as u16;
+            let x = (frame.area().width - width) / 2;
+            let y = (frame.area().height - height) / 2;
+
+            let rect = Rect::new(x, y, width, height);
+            ActionMenu.render(
+                rect,
+                frame.buffer_mut(),
+                &mut self.model.ui.action_menu.list_state,
+            );
         }
 
         self.draw_error(frame);

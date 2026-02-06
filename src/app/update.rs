@@ -1,7 +1,14 @@
 use crossterm::event::KeyEvent;
 
 use crate::{
-    app::{cmd::Cmd, msg::Msg, pane::story_list, App}, dbg_file, keys::AppKey
+    app::{
+        App,
+        cmd::Cmd,
+        msg::Msg,
+        pane::{action_menu, story_list},
+    },
+    dbg_file,
+    keys::AppKey,
 };
 
 impl App {
@@ -65,12 +72,21 @@ impl App {
 
             Msg::NoteOpened => {
                 vec![Cmd::None]
-            },
+            }
 
             Msg::CacheWritten => vec![Cmd::None],
 
             Msg::Error(e) => {
                 self.model.ui.errors.push(e);
+                vec![Cmd::None]
+            }
+
+            Msg::ActionMenu(menu_msg) => {
+                action_menu::update(&mut self.model.ui, &self.model.data, menu_msg)
+            }
+
+            Msg::ToggleActionMenu => {
+                self.model.ui.action_menu.is_showing = !self.model.ui.action_menu.is_showing;
                 vec![Cmd::None]
             }
         }
@@ -85,20 +101,29 @@ impl App {
                 let next_view = self.model.ui.active_view.next();
                 return self.update(Msg::SwitchToView(next_view));
             }
+
             Ok(AppKey::BackTab) => {
                 let prev_view = self.model.ui.active_view.prev();
                 return self.update(Msg::SwitchToView(prev_view));
             }
+
+            Ok(AppKey::ToggleActionMenu) => return self.update(Msg::ToggleActionMenu),
 
             _ => {}
         }
 
         // Route to active view's key handler
         // For now, only story_list handles keys
-        if let Some(msg) = story_list::key_to_msg(key) {
-            self.update(Msg::StoryList(msg))
+        if self.model.ui.action_menu.is_showing {
+            if let Some(msg) = action_menu::key_to_msg(key) {
+                return self.update(Msg::ActionMenu(msg));
+            }
         } else {
-            vec![Cmd::None]
+            if let Some(msg) = story_list::key_to_msg(key) {
+                return self.update(Msg::StoryList(msg));
+            }
         }
+
+        vec![Cmd::None]
     }
 }

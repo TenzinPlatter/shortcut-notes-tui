@@ -7,12 +7,10 @@ use crossterm::terminal::{
 };
 use ratatui::{Terminal, prelude::CrosstermBackend};
 use std::{
-    env,
     fs::{OpenOptions, create_dir_all, read_to_string},
     process::Command as ProcessCommand,
 };
 use tempfile::NamedTempFile;
-use tokio::process::Command;
 use tokio::sync::mpsc::UnboundedSender;
 
 use crate::app::model::Model;
@@ -40,7 +38,9 @@ pub enum Cmd {
     EditStoryContent(Story),
     FetchEpics,
     SelectStory(Option<Story>),
-    OpenTmuxSession(String),
+    OpenTmuxSession {
+        story_name: String,
+    },
     Batch(Vec<Cmd>),
 }
 
@@ -122,8 +122,9 @@ pub async fn execute(
             Ok(())
         }
 
-        Cmd::OpenTmuxSession(name) => {
-            open_tmux_session(&name).await?;
+        Cmd::OpenTmuxSession { story_name } => {
+            let session_name = Story::tmux_session_name(&story_name);
+            open_tmux_session(&session_name).await?;
             Ok(())
         }
 
@@ -145,7 +146,6 @@ pub async fn execute(
             std::io::stdout().execute(EnterAlternateScreen)?;
             enable_raw_mode()?;
             terminal.clear()?;
-
 
             // TODO: update story description
 
