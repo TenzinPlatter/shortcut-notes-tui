@@ -1,9 +1,11 @@
 use std::collections::HashSet;
 
-use ratatui::widgets::ListState;
-
 use crate::{
-    api::{epic::Epic, iteration::Iteration, story::Story}, app::pane::action_menu::{self, ActionMenuState}, cache::Cache, config::Config, error::ErrorInfo
+    api::{epic::Epic, iteration::Iteration, story::Story},
+    app::pane::action_menu::ActionMenuState,
+    cache::Cache,
+    config::Config,
+    error::ErrorInfo,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -97,4 +99,3 @@ impl Default for StoryListState {
         }
     }
 }
-

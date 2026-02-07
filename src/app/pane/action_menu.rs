@@ -17,6 +17,7 @@ use crate::{
         model::{DataState, UiState},
         msg::ActionMenuMsg,
     },
+    navkey,
 };
 
 pub struct ActionMenuState {
@@ -64,7 +65,9 @@ impl StatefulWidget for ActionMenu {
             ListItem::from(line)
         });
 
-        let block = Block::bordered().border_type(BorderType::Rounded).padding(Padding::vertical(2));
+        let block = Block::bordered()
+            .border_type(BorderType::Rounded)
+            .padding(Padding::vertical(2));
 
         let list = List::new(items)
             .block(block)
@@ -108,7 +111,7 @@ impl ActionMenuItem {
     pub fn label(self) -> &'static str {
         match self {
             Self::OpenNote => "Open Note",
-            Self::EditContents => "Edit Contents",
+            Self::EditContents => "Edit Description",
             Self::OpenTmux => "Open Tmux Session",
             Self::SetActive => "Set as Active Story",
         }
@@ -188,11 +191,10 @@ pub fn update(
 }
 
 pub fn key_to_msg(key: KeyEvent) -> Option<ActionMenuMsg> {
-    // TODO: consolidate with AppKey
     match key.code {
         KeyCode::Enter => Some(ActionMenuMsg::Accept),
-        KeyCode::Char('j') | KeyCode::Down => Some(ActionMenuMsg::FocusNext),
-        KeyCode::Char('k') | KeyCode::Up => Some(ActionMenuMsg::FocusPrev),
+        navkey!(down) => Some(ActionMenuMsg::FocusNext),
+        navkey!(up) => Some(ActionMenuMsg::FocusPrev),
         KeyCode::Esc | KeyCode::Char('q') => Some(ActionMenuMsg::Close),
         _ => None,
     }

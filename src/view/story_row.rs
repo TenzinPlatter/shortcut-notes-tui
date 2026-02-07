@@ -5,7 +5,7 @@ use ratatui::{
     text::Line,
 };
 
-use crate::{api::story::Story, keys::AppKey};
+use crate::api::story::Story;
 
 use super::list::ListRow;
 
@@ -72,10 +72,7 @@ impl ListRow for StoryRow<'_> {
         } else {
             // Render expansion hint
             if y < max_y {
-                let line = Line::from(format!(
-                    "  Press <{}> to view description",
-                    AppKey::Select.as_keycode()
-                ))
+                let line = Line::from("Press <Space> to view description")
                 .style(base_style.italic());
                 buf.set_line(area.x, y, &line, area.width);
                 y += 1;

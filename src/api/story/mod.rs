@@ -6,7 +6,6 @@ use uuid::Uuid;
 
 use crate::{
     api::{ApiClient, branch::Branch, story::comment::StoryComment},
-    keys::AppKey,
 };
 
 pub mod comment;
@@ -96,10 +95,7 @@ impl Story {
             }
         } else {
             text.push(
-                Line::from(format!(
-                    "  Press <{}> to view description",
-                    AppKey::Select.as_keycode()
-                ))
+                Line::from("  Press <Space> to view description")
                 .style(Style::default().italic()),
             )
         }

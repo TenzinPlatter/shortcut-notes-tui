@@ -1,4 +1,4 @@
-use crossterm::event::KeyEvent;
+use crossterm::event::{KeyCode, KeyEvent};
 
 use crate::{
     app::{
@@ -8,7 +8,6 @@ use crate::{
         pane::{action_menu, story_list},
     },
     dbg_file,
-    keys::AppKey,
 };
 
 impl App {
@@ -108,21 +107,21 @@ impl App {
             };
         }
 
-        match key.code.try_into() {
-            Ok(AppKey::Quit) => return self.update(Msg::Quit),
+        match key.code {
+            KeyCode::Char('q') => return self.update(Msg::Quit),
 
             // View switching (Tab/Shift+Tab)
-            Ok(AppKey::Tab) => {
+            KeyCode::Tab => {
                 let next_view = self.model.ui.active_view.next();
                 return self.update(Msg::SwitchToView(next_view));
             }
 
-            Ok(AppKey::BackTab) => {
+            KeyCode::BackTab => {
                 let prev_view = self.model.ui.active_view.prev();
                 return self.update(Msg::SwitchToView(prev_view));
             }
 
-            Ok(AppKey::ToggleActionMenu) => return self.update(Msg::ToggleActionMenu),
+            KeyCode::Enter => return self.update(Msg::ToggleActionMenu),
 
             _ => {}
         }

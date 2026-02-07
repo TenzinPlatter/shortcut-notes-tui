@@ -1,10 +1,9 @@
-use crossterm::event::KeyEvent;
+use crossterm::event::{KeyCode, KeyEvent};
 
 use crate::{
     api::{iteration::Iteration, story::Story},
     app::{cmd::Cmd, msg::StoryListMsg},
-    dbg_file,
-    keys::AppKey,
+    dbg_file, navkey,
 };
 
 pub use crate::app::model::StoryListState;
@@ -100,14 +99,10 @@ fn get_selected_story(state: &StoryListState, stories: &[Story]) -> Option<Story
 }
 
 pub fn key_to_msg(key: KeyEvent) -> Option<StoryListMsg> {
-    match key.code.try_into() {
-        Ok(AppKey::Down) => Some(StoryListMsg::FocusNext),
-        Ok(AppKey::Up) => Some(StoryListMsg::FocusPrev),
-        Ok(AppKey::Select) => Some(StoryListMsg::ToggleExpand),
-        Ok(AppKey::Edit) => Some(StoryListMsg::OpenNote),
-        Ok(AppKey::SetActive) => Some(StoryListMsg::SelectStory),
-        Ok(AppKey::TmuxEnter) => Some(StoryListMsg::TmuxEnter),
-        Ok(AppKey::EditNoteContents) => Some(StoryListMsg::EditStoryContents),
+    match key.code {
+        navkey!(down) => Some(StoryListMsg::FocusNext),
+        navkey!(up) => Some(StoryListMsg::FocusPrev),
+        KeyCode::Enter => Some(StoryListMsg::ToggleExpand),
         _ => None,
     }
 }

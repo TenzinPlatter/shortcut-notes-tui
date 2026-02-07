@@ -19,12 +19,13 @@ pub mod cli;
 pub mod config;
 pub mod dummy;
 pub mod error;
-pub mod keys;
 pub mod macros;
 pub mod note;
 pub mod text_utils;
 pub mod tmux;
 pub mod view;
+#[macro_use]
+pub mod keys;
 
 pub async fn get_user_id(saved_user_id: Option<Uuid>, api_token: &str) -> anyhow::Result<Uuid> {
     let id = if let Some(id) = saved_user_id {
