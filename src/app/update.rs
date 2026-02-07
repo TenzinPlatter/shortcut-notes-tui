@@ -1,7 +1,14 @@
 use crossterm::event::KeyEvent;
 
 use crate::{
-    app::{cmd::Cmd, msg::Msg, pane::story_list, App}, dbg_file, keys::AppKey
+    app::{
+        App,
+        cmd::Cmd,
+        msg::Msg,
+        pane::{action_menu, story_list},
+    },
+    dbg_file,
+    keys::AppKey,
 };
 
 impl App {
@@ -65,7 +72,7 @@ impl App {
 
             Msg::NoteOpened => {
                 vec![Cmd::None]
-            },
+            }
 
             Msg::CacheWritten => vec![Cmd::None],
 
@@ -73,10 +80,34 @@ impl App {
                 self.model.ui.errors.push(e);
                 vec![Cmd::None]
             }
+
+            Msg::ActionMenu(menu_msg) => {
+                if let Some(idx) = self.model.ui.story_list.selected_index {
+                    let hovered_story = &self.model.data.stories[idx];
+                    action_menu::update(&mut self.model.ui, &self.model.data, menu_msg, hovered_story)
+                } else {
+                    vec![Cmd::None]
+                }
+            }
+
+            Msg::ToggleActionMenu => {
+                vec![Cmd::ActionMenuVisibility(
+                    !self.model.ui.action_menu.is_showing,
+                )]
+            }
         }
     }
 
     fn handle_key_input(&mut self, key: KeyEvent) -> Vec<Cmd> {
+        // action menu is rendered as an overlay, so swallows all keybinds when showing
+        if self.model.ui.action_menu.is_showing {
+            return if let Some(msg) = action_menu::key_to_msg(key) {
+                self.update(Msg::ActionMenu(msg))
+            } else {
+                vec![Cmd::None]
+            };
+        }
+
         match key.code.try_into() {
             Ok(AppKey::Quit) => return self.update(Msg::Quit),
 
@@ -85,20 +116,22 @@ impl App {
                 let next_view = self.model.ui.active_view.next();
                 return self.update(Msg::SwitchToView(next_view));
             }
+
             Ok(AppKey::BackTab) => {
                 let prev_view = self.model.ui.active_view.prev();
                 return self.update(Msg::SwitchToView(prev_view));
             }
 
+            Ok(AppKey::ToggleActionMenu) => return self.update(Msg::ToggleActionMenu),
+
             _ => {}
         }
 
         // Route to active view's key handler
-        // For now, only story_list handles keys
         if let Some(msg) = story_list::key_to_msg(key) {
-            self.update(Msg::StoryList(msg))
-        } else {
-            vec![Cmd::None]
+            return self.update(Msg::StoryList(msg));
         }
+
+        vec![Cmd::None]
     }
 }

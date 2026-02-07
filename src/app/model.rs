@@ -1,10 +1,9 @@
 use std::collections::HashSet;
 
+use ratatui::widgets::ListState;
+
 use crate::{
-    api::{epic::Epic, iteration::Iteration, story::Story},
-    cache::Cache,
-    config::Config,
-    error::ErrorInfo,
+    api::{epic::Epic, iteration::Iteration, story::Story}, app::pane::action_menu::{self, ActionMenuState}, cache::Cache, config::Config, error::ErrorInfo
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -62,13 +61,15 @@ pub struct DataState {
 pub struct UiState {
     pub active_view: ViewType,
     pub story_list: StoryListState,
+    pub action_menu: ActionMenuState,
     pub errors: Vec<ErrorInfo>,
 }
 
 impl UiState {
     pub fn new(active_story: Option<Story>) -> UiState {
         Self {
-            active_view: Default::default(),
+            active_view: ViewType::default(),
+            action_menu: ActionMenuState::default(),
             errors: vec![ErrorInfo::new("hi there", "hello!")],
             story_list: StoryListState {
                 selected_index: Some(0),
@@ -91,8 +92,9 @@ impl Default for StoryListState {
     fn default() -> Self {
         Self {
             selected_index: Some(0),
-            expanded_items: Default::default(),
-            active_story: Default::default(),
+            expanded_items: HashSet::default(),
+            active_story: None,
         }
     }
 }
+

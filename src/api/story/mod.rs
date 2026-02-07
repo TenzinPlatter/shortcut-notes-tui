@@ -79,8 +79,8 @@ impl ApiClient {
 }
 
 impl Story {
-    pub fn tmux_session_name(&self) -> String {
-        let story_slug = slugify!(&self.name);
+    pub fn tmux_session_name(name: &str) -> String {
+        let story_slug = slugify!(name);
         format!("scn--{}", story_slug)
     }
 

@@ -1,14 +1,6 @@
 use std::fmt::Display;
 
-use crossterm::event::{KeyCode, KeyEvent};
-
-pub trait KeyHandler {
-    /// Handle a key event. Returns whether the event was consumed by the handler, i.e. whether
-    /// further processing should be stopped.
-    fn handle_key_event(&mut self, _key_event: KeyEvent) -> bool {
-        false
-    }
-}
+use crossterm::event::KeyCode;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum AppKey {
@@ -25,6 +17,7 @@ pub enum AppKey {
     SetActive,
     TmuxEnter,
     EditNoteContents,
+    ToggleActionMenu,
 }
 
 impl AppKey {
@@ -38,12 +31,14 @@ impl AppKey {
             AppKey::Quit => KeyCode::Char('q'),
             AppKey::ShowErrorDetails => KeyCode::Char('d'),
             AppKey::Select => KeyCode::Char(' '),
-            AppKey::Edit => KeyCode::Enter,
+            AppKey::Edit => KeyCode::Char('p'), // TODO: put this back to something else? used to
+            // be enter
             AppKey::Tab => KeyCode::Tab,
             AppKey::BackTab => KeyCode::BackTab,
             AppKey::SetActive => KeyCode::Char('a'),
             AppKey::TmuxEnter => KeyCode::Char('t'),
             AppKey::EditNoteContents => KeyCode::Char('e'),
+            AppKey::ToggleActionMenu => KeyCode::Enter,
         }
     }
 }
@@ -60,12 +55,13 @@ impl TryFrom<KeyCode> for AppKey {
             KeyCode::Char('q') => Ok(AppKey::Quit),
             KeyCode::Char('d') => Ok(AppKey::ShowErrorDetails),
             KeyCode::Char(' ') => Ok(AppKey::Select),
-            KeyCode::Enter => Ok(AppKey::Edit),
+            KeyCode::Char('p') => Ok(AppKey::Edit),
             KeyCode::Tab => Ok(AppKey::Tab),
             KeyCode::BackTab => Ok(AppKey::BackTab),
             KeyCode::Char('a') => Ok(AppKey::SetActive),
             KeyCode::Char('t') => Ok(AppKey::TmuxEnter),
             KeyCode::Char('e') => Ok(AppKey::EditNoteContents),
+            KeyCode::Enter => Ok(AppKey::ToggleActionMenu),
             _ => Err(()),
         }
     }
