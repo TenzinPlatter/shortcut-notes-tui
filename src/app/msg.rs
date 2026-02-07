@@ -39,4 +39,5 @@ pub enum ActionMenuMsg {
     FocusNext,
     FocusPrev,
     Accept,
+    Close,
 }

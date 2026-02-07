@@ -38,6 +38,7 @@ pub enum Cmd {
     EditStoryContent(Story),
     FetchEpics,
     SelectStory(Option<Story>),
+    ActionMenuVisibility(bool),
     OpenTmuxSession {
         story_name: String,
     },
@@ -149,6 +150,11 @@ pub async fn execute(
 
             // TODO: update story description
 
+            Ok(())
+        }
+        
+        Cmd::ActionMenuVisibility(enabled) => {
+            model.ui.action_menu.is_showing = enabled;
             Ok(())
         }
     }

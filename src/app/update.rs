@@ -82,17 +82,32 @@ impl App {
             }
 
             Msg::ActionMenu(menu_msg) => {
-                action_menu::update(&mut self.model.ui, &self.model.data, menu_msg)
+                if let Some(idx) = self.model.ui.story_list.selected_index {
+                    let hovered_story = &self.model.data.stories[idx];
+                    action_menu::update(&mut self.model.ui, &self.model.data, menu_msg, hovered_story)
+                } else {
+                    vec![Cmd::None]
+                }
             }
 
             Msg::ToggleActionMenu => {
-                self.model.ui.action_menu.is_showing = !self.model.ui.action_menu.is_showing;
-                vec![Cmd::None]
+                vec![Cmd::ActionMenuVisibility(
+                    !self.model.ui.action_menu.is_showing,
+                )]
             }
         }
     }
 
     fn handle_key_input(&mut self, key: KeyEvent) -> Vec<Cmd> {
+        // action menu is rendered as an overlay, so swallows all keybinds when showing
+        if self.model.ui.action_menu.is_showing {
+            return if let Some(msg) = action_menu::key_to_msg(key) {
+                self.update(Msg::ActionMenu(msg))
+            } else {
+                vec![Cmd::None]
+            };
+        }
+
         match key.code.try_into() {
             Ok(AppKey::Quit) => return self.update(Msg::Quit),
 
@@ -113,15 +128,8 @@ impl App {
         }
 
         // Route to active view's key handler
-        // For now, only story_list handles keys
-        if self.model.ui.action_menu.is_showing {
-            if let Some(msg) = action_menu::key_to_msg(key) {
-                return self.update(Msg::ActionMenu(msg));
-            }
-        } else {
-            if let Some(msg) = story_list::key_to_msg(key) {
-                return self.update(Msg::StoryList(msg));
-            }
+        if let Some(msg) = story_list::key_to_msg(key) {
+            return self.update(Msg::StoryList(msg));
         }
 
         vec![Cmd::None]

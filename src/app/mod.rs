@@ -109,8 +109,8 @@ impl App {
         }
 
         if self.model.ui.action_menu.is_showing {
-            let width: u16 = (frame.area().width as f32 * 0.4) as u16;
-            let height: u16 = (frame.area().height as f32 * 0.8) as u16;
+            let (width, height) = ActionMenu::window_dimensions();
+            let (width, height) = (width as u16, height as u16);
             let x = (frame.area().width - width) / 2;
             let y = (frame.area().height - height) / 2;
 
