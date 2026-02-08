@@ -102,7 +102,7 @@ pub fn key_to_msg(key: KeyEvent) -> Option<StoryListMsg> {
     match key.code {
         navkey!(down) => Some(StoryListMsg::FocusNext),
         navkey!(up) => Some(StoryListMsg::FocusPrev),
-        KeyCode::Enter => Some(StoryListMsg::ToggleExpand),
+        KeyCode::Char(' ') => Some(StoryListMsg::ToggleExpand),
         _ => None,
     }
 }
