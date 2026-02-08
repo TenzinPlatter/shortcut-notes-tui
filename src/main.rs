@@ -1,6 +1,6 @@
 use clap::Parser;
 use shortcut_notes::{
-    cache::Cache, cli::Cli, config::Config, worktree::{check_worktree_dependencies, get_repo_list},
+    cache::Cache, cli::Cli, config::Config, worktree::check_worktree_dependencies,
 };
 
 #[tokio::main]

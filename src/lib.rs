@@ -1,4 +1,4 @@
-use std::process::{Command, ExitStatus, Output};
+use std::process::{Command, Output};
 
 use crossterm::{
     ExecutableCommand,

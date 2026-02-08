@@ -1,6 +1,6 @@
 use anyhow::Result;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
-use ratatui::widgets::{Block, Clear, Paragraph, StatefulWidget, Widget, WidgetRef};
+use ratatui::widgets::{Block, Clear, Paragraph, StatefulWidget, WidgetRef};
 use ratatui::{DefaultTerminal, Frame, widgets::FrameExt};
 use tokio::sync::mpsc;
 

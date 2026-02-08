@@ -83,6 +83,7 @@ pub struct DataState {
     pub active_story: Option<Story>,
 }
 
+#[derive(Default)]
 pub struct UiState {
     pub active_view: ViewType,
     pub story_list: StoryListState,
@@ -92,18 +93,6 @@ pub struct UiState {
     pub throbber_state: throbber_widgets_tui::ThrobberState,
 }
 
-impl Default for UiState {
-    fn default() -> Self {
-        Self {
-            active_view: ViewType::default(),
-            story_list: StoryListState::default(),
-            action_menu: ActionMenuState::default(),
-            errors: Vec::new(),
-            loading: LoadingState::default(),
-            throbber_state: throbber_widgets_tui::ThrobberState::default(),
-        }
-    }
-}
 
 #[derive(Clone, Default)]
 pub struct StoryListState {

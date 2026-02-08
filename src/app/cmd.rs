@@ -1,5 +1,4 @@
 use std::io::{Stdout, Write};
-use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 use crossterm::ExecutableCommand;

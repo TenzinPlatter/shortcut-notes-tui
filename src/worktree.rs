@@ -9,7 +9,7 @@ use crossterm::{
     ExecutableCommand,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
-use ratatui::{DefaultTerminal, prelude::CrosstermBackend};
+use ratatui::DefaultTerminal;
 use slugify::slugify;
 use tokio::process::Command as TokioCommand;
 use which::which;
