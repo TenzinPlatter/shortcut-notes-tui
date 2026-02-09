@@ -2,8 +2,6 @@ use chrono::{NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use slugify::slugify;
 
-use crate::api::{iteration::Iteration, story::Story};
-
 #[derive(Debug, Deserialize, Serialize)]
 pub enum NoteType {
     Meeting,
@@ -43,20 +41,23 @@ pub struct Frontmatter {
 
 impl Frontmatter {
     // TODO: epic
-    pub fn new(story: &Story, current_iteration: Option<&Iteration>) -> Self {
-        let slug = slugify!(&story.name);
+    pub fn new(
+        story_id: i32,
+        story_name: String,
+        story_app_url: String,
+        iteration_app_url: Option<String>,
+    ) -> Self {
+        let slug = slugify!(&story_name);
         let now = Utc::now();
-
-        let iteration_link = current_iteration.map(|it| it.app_url.clone());
 
         Self {
             slug_id: slug,
 
-            story_id: format!("sc-{}", story.id),
-            story_name: story.name.clone(),
-            story_link: story.app_url.clone(),
+            story_id: format!("sc-{}", story_id),
+            story_name,
+            story_link: story_app_url,
 
-            iteration_link,
+            iteration_link: iteration_app_url,
 
             epic_link: None,
 

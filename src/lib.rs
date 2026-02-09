@@ -56,7 +56,13 @@ pub async fn handle_command(command: Commands, cache: Cache, config: &Config) ->
     match command {
         Commands::Open => {
             if let Some(story) = cache.active_story {
-                open_note_in_editor(story, cache.current_iteration, config)?;
+                open_note_in_editor(
+                    story.id,
+                    story.name,
+                    story.app_url,
+                    cache.current_iteration.map(|it| it.app_url),
+                    config,
+                )?;
             } else {
                 anyhow::bail!("You do not have a currently active story");
             }

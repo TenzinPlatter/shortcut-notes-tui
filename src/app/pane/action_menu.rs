@@ -163,13 +163,21 @@ pub fn update(
             let mut actions = match ActionMenuItem::from_idx(state.selected().unwrap_or(0)) {
                 ActionMenuItem::OpenNote => {
                     vec![Cmd::OpenNote {
-                        story: story.clone(),
-                        iteration: data_state.current_iteration.clone(),
+                        story_id: story.id,
+                        story_name: story.name.clone(),
+                        story_app_url: story.app_url.clone(),
+                        iteration_app_url: data_state
+                            .current_iteration
+                            .as_ref()
+                            .map(|it| it.app_url.clone()),
                     }]
                 }
 
                 ActionMenuItem::EditDescription => {
-                    vec![Cmd::EditStoryContent(story.clone())]
+                    vec![Cmd::EditStoryContent {
+                        story_id: story.id,
+                        description: story.description.clone(),
+                    }]
                 }
 
                 ActionMenuItem::OpenTmux => {

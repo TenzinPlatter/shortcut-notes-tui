@@ -47,10 +47,10 @@ impl ApiClient {
 
     pub async fn get_owned_iteration_stories(
         &self,
-        iteration: &Iteration,
+        iteration_id: i32,
     ) -> anyhow::Result<Vec<Story>> {
         let response = self
-            .get(&format!("iterations/{}/stories", iteration.id))
+            .get(&format!("iterations/{}/stories", iteration_id))
             .await?;
         let stories_slim = response.json::<Vec<StorySlim>>().await?;
         let slim_owned: Vec<_> = stories_slim

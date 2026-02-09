@@ -6,10 +6,7 @@ use std::{
 
 use chrono::Utc;
 
-use crate::{
-    api::{iteration::Iteration, story::Story},
-    note::frontmatter::Frontmatter,
-};
+use crate::note::frontmatter::Frontmatter;
 
 pub mod frontmatter;
 
@@ -21,12 +18,14 @@ pub struct Note {
 impl Note {
     pub fn new<P: AsRef<Path>>(
         notes_dir: &P,
-        story: &Story,
-        current_iteration: Option<&Iteration>,
+        story_id: i32,
+        story_name: String,
+        story_app_url: String,
+        iteration_app_url: Option<String>,
     ) -> Self {
         let _now = Utc::now();
 
-        let frontmatter = Frontmatter::new(story, current_iteration);
+        let frontmatter = Frontmatter::new(story_id, story_name, story_app_url, iteration_app_url);
         let mut path = PathBuf::from(notes_dir.as_ref());
         // TODO: date + don't create a new note at each time
         // path.push(format!("{}", now.year()));

@@ -74,7 +74,12 @@ impl App {
                 self.model.cache.current_iteration = Some(iteration.clone());
                 self.model.ui.loading = LoadingState::FetchingStories;
 
-                vec![Cmd::WriteCache, Cmd::FetchStories { iteration }]
+                vec![
+                    Cmd::WriteCache,
+                    Cmd::FetchStories {
+                        iteration_id: iteration.id,
+                    },
+                ]
             }
 
             Msg::SwitchToView(view_type) => {

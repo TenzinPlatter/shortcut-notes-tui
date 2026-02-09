@@ -18,7 +18,7 @@ use crate::error::ErrorInfo;
 use crate::tmux::{session_attach, session_create};
 use crate::worktree::{create_worktree, get_repo_list, select_repo_with_fzf};
 use crate::{
-    api::{ApiClient, iteration::Iteration, story::Story},
+    api::{ApiClient, story::Story},
     app::msg::Msg,
     config::Config,
     dbg_file,
@@ -29,14 +29,19 @@ use crate::{
 pub enum Cmd {
     None,
     OpenNote {
-        story: Story,
-        iteration: Option<Iteration>,
+        story_id: i32,
+        story_name: String,
+        story_app_url: String,
+        iteration_app_url: Option<String>,
     },
     WriteCache,
     FetchStories {
-        iteration: Iteration,
+        iteration_id: i32,
     },
-    EditStoryContent(Story),
+    EditStoryContent {
+        story_id: i32,
+        description: String,
+    },
     FetchEpics,
     SelectStory(Option<Story>),
     ActionMenuVisibility(bool),
@@ -59,8 +64,20 @@ pub async fn execute(
     match cmd {
         Cmd::None => Ok(()),
 
-        Cmd::OpenNote { story, iteration } => {
-            open_note_in_editor_tui(story.clone(), iteration, &model.config, terminal)?;
+        Cmd::OpenNote {
+            story_id,
+            story_name,
+            story_app_url,
+            iteration_app_url,
+        } => {
+            open_note_in_editor_tui(
+                story_id,
+                story_name,
+                story_app_url,
+                iteration_app_url,
+                &model.config,
+                terminal,
+            )?;
             sender.send(Msg::NoteOpened).ok();
             Ok(())
         }
@@ -72,12 +89,12 @@ pub async fn execute(
             Ok(())
         }
 
-        Cmd::FetchStories { iteration } => {
+        Cmd::FetchStories { iteration_id } => {
             let sender = sender.clone();
             let api_client = api_client.clone();
 
             tokio::spawn(async move {
-                match api_client.get_owned_iteration_stories(&iteration).await {
+                match api_client.get_owned_iteration_stories(iteration_id).await {
                     Ok(stories) => {
                         sender
                             .send(Msg::StoriesLoaded {
@@ -133,11 +150,14 @@ pub async fn execute(
             Ok(())
         }
 
-        Cmd::EditStoryContent(story) => {
+        Cmd::EditStoryContent {
+            story_id: _,
+            description,
+        } => {
             // NOTE: this only works for editors that run from their process, i.e. code spawns the
             // vscode gui, then ends itself, will not work as it is now
             let mut tempfile = NamedTempFile::new()?;
-            tempfile.write_all(story.description.as_bytes())?;
+            tempfile.write_all(description.as_bytes())?;
 
             let tmp_path = tempfile.path();
 
@@ -176,11 +196,19 @@ pub async fn execute(
 }
 
 pub fn open_note_in_editor(
-    story: Story,
-    iteration: Option<Iteration>,
+    story_id: i32,
+    story_name: String,
+    story_app_url: String,
+    iteration_app_url: Option<String>,
     config: &Config,
 ) -> anyhow::Result<()> {
-    let note = Note::new(&config.notes_dir, &story, iteration.as_ref());
+    let note = Note::new(
+        &config.notes_dir,
+        story_id,
+        story_name,
+        story_app_url,
+        iteration_app_url,
+    );
 
     if note.path.is_dir() {
         anyhow::bail!("Note path: {} is not a file", note.path.display());
@@ -210,15 +238,17 @@ pub fn open_note_in_editor(
 }
 
 pub fn open_note_in_editor_tui(
-    story: Story,
-    iteration: Option<Iteration>,
+    story_id: i32,
+    story_name: String,
+    story_app_url: String,
+    iteration_app_url: Option<String>,
     config: &Config,
     terminal: &mut Terminal<CrosstermBackend<Stdout>>,
 ) -> anyhow::Result<()> {
     std::io::stdout().execute(LeaveAlternateScreen)?;
     disable_raw_mode()?;
 
-    let result = open_note_in_editor(story, iteration, config);
+    let result = open_note_in_editor(story_id, story_name, story_app_url, iteration_app_url, config);
 
     std::io::stdout().execute(EnterAlternateScreen)?;
     enable_raw_mode()?;

@@ -57,8 +57,10 @@ pub fn update(
         StoryListMsg::OpenNote => {
             if let Some(story) = get_selected_story(state, stories) {
                 return vec![Cmd::OpenNote {
-                    story: story.clone(),
-                    iteration: current_iteration.cloned(),
+                    story_id: story.id,
+                    story_name: story.name.clone(),
+                    story_app_url: story.app_url.clone(),
+                    iteration_app_url: current_iteration.map(|it| it.app_url.clone()),
                 }];
             }
             vec![Cmd::None]
@@ -82,7 +84,10 @@ pub fn update(
 
         StoryListMsg::EditStoryContents => {
             if let Some(story) = get_selected_story(state, stories) {
-                vec![Cmd::EditStoryContent(story.clone())]
+                vec![Cmd::EditStoryContent {
+                    story_id: story.id,
+                    description: story.description.clone(),
+                }]
             } else {
                 vec![Cmd::None]
             }

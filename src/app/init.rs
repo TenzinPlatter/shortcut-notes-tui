@@ -76,7 +76,7 @@ impl App {
             }
 
             match api_client_clone
-                .get_owned_iteration_stories(&iteration)
+                .get_owned_iteration_stories(iteration.id)
                 .await
             {
                 Ok(stories) => {
