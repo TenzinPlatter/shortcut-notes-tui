@@ -9,6 +9,7 @@ use crate::{
         pane::{action_menu, description_modal, story_list},
     },
     dbg_file,
+    error::ErrorInfo,
     view::description_modal::DescriptionModal,
 };
 
@@ -42,8 +43,8 @@ impl App {
                 }
 
                 // Select first story if none selected and list is non-empty
-                if self.model.ui.story_list.selected_index.is_none() && !stories.is_empty() {
-                    self.model.ui.story_list.selected_index = Some(0);
+                if self.model.ui.story_list.selected_story_id.is_none() && !stories.is_empty() {
+                    self.model.ui.story_list.selected_story_id = stories.first().map(|s| s.id);
                 }
 
                 if !from_cache
@@ -60,6 +61,63 @@ impl App {
                 }
 
                 self.model.data.stories = stories.clone();
+
+                // Reconcile selection: if selected story no longer exists, select first
+                if let Some(selected_id) = self.model.ui.story_list.selected_story_id {
+                    if !stories.iter().any(|s| s.id == selected_id) {
+                        self.model.ui.story_list.selected_story_id = stories.first().map(|s| s.id);
+                    }
+                }
+
+                // Reconcile description modal
+                if self.model.ui.description_modal.is_showing {
+                    if let Some(ref modal_story) = self.model.ui.description_modal.story {
+                        match stories.iter().find(|s| s.id == modal_story.id) {
+                            Some(fresh_story) => {
+                                // Update modal with fresh data
+                                self.model.ui.description_modal.story = Some(fresh_story.clone());
+                            }
+                            None => {
+                                // Story gone — close modal, show error
+                                self.model.ui.description_modal.is_showing = false;
+                                self.model.ui.description_modal.story = None;
+                                self.model.ui.errors.push(ErrorInfo::new(
+                                    "Story no longer available".to_string(),
+                                    "The story was removed or moved out of this iteration".to_string(),
+                                ));
+                            }
+                        }
+                    }
+                }
+
+                // Reconcile action menu
+                if self.model.ui.action_menu.is_showing {
+                    if let Some(target_id) = self.model.ui.action_menu.target_story_id {
+                        if !stories.iter().any(|s| s.id == target_id) {
+                            // Story gone — close menu, show error
+                            self.model.ui.action_menu.is_showing = false;
+                            self.model.ui.action_menu.target_story_id = None;
+                            self.model.ui.errors.push(ErrorInfo::new(
+                                "Story no longer available".to_string(),
+                                "The story was removed or moved out of this iteration".to_string(),
+                            ));
+                        }
+                    }
+                }
+
+                // Reconcile active story
+                if let Some(ref active) = self.model.data.active_story {
+                    if !stories.iter().any(|s| s.id == active.id) {
+                        // Active story no longer in iteration — clear it
+                        self.model.data.active_story = None;
+                        self.model.cache.active_story = None;
+                        self.model.ui.errors.push(ErrorInfo::new(
+                            "Active story cleared".to_string(),
+                            "The active story is no longer in the current iteration".to_string(),
+                        ));
+                    }
+                }
+
                 self.model.cache.iteration_stories = Some(stories);
 
                 vec![Cmd::WriteCache]
@@ -104,8 +162,11 @@ impl App {
             }
 
             Msg::ActionMenu(menu_msg) => {
-                if let Some(idx) = self.model.ui.story_list.selected_index {
-                    let hovered_story = &self.model.data.stories[idx];
+                let story = self.model.ui.action_menu.target_story_id.and_then(|id| {
+                    self.model.data.stories.iter().find(|s| s.id == id)
+                });
+
+                if let Some(hovered_story) = story {
                     action_menu::update(
                         &mut self.model.ui,
                         &self.model.data,
@@ -113,6 +174,8 @@ impl App {
                         hovered_story,
                     )
                 } else {
+                    // Target story no longer exists, close menu
+                    self.model.ui.action_menu.is_showing = false;
                     vec![Cmd::None]
                 }
             }
@@ -186,9 +249,11 @@ impl App {
 
             // Open description modal with Space
             KeyCode::Char(' ') => {
-                if let Some(idx) = self.model.ui.story_list.selected_index
-                    && let Some(story) = self.model.data.stories.get(idx)
-                {
+                let story = self.model.ui.story_list.selected_story_id.and_then(|id| {
+                    self.model.data.stories.iter().find(|s| s.id == id)
+                });
+
+                if let Some(story) = story {
                     description_modal::open(
                         &mut self.model.ui.description_modal,
                         story.clone(),

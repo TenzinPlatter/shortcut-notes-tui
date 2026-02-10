@@ -23,6 +23,7 @@ use crate::{
 pub struct ActionMenuState {
     pub list_state: ListState,
     pub is_showing: bool,
+    pub target_story_id: Option<i32>,
 }
 
 impl Default for ActionMenuState {
@@ -33,6 +34,7 @@ impl Default for ActionMenuState {
         Self {
             list_state,
             is_showing: false,
+            target_story_id: None,
         }
     }
 }

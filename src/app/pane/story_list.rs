@@ -23,12 +23,14 @@ pub fn update(
                 return vec![Cmd::None];
             }
 
-            state.selected_index = Some(match state.selected_index {
-                None => 0,
-                Some(idx) if idx >= stories.len() - 1 => 0, // Wrap around
-                Some(idx) => idx + 1,
-            });
+            let current_idx = state.selected_index(stories).unwrap_or(0);
+            let next_idx = if current_idx >= stories.len() - 1 {
+                0 // Wrap around
+            } else {
+                current_idx + 1
+            };
 
+            state.selected_story_id = stories.get(next_idx).map(|s| s.id);
             vec![Cmd::None]
         }
 
@@ -37,12 +39,14 @@ pub fn update(
                 return vec![Cmd::None];
             }
 
-            state.selected_index = Some(match state.selected_index {
-                None => 0,
-                Some(0) => stories.len() - 1, // Wrap around
-                Some(idx) => idx - 1,
-            });
+            let current_idx = state.selected_index(stories).unwrap_or(0);
+            let prev_idx = if current_idx == 0 {
+                stories.len() - 1 // Wrap around
+            } else {
+                current_idx - 1
+            };
 
+            state.selected_story_id = stories.get(prev_idx).map(|s| s.id);
             vec![Cmd::None]
         }
 
@@ -92,11 +96,8 @@ pub fn update(
 }
 
 fn get_selected_story(state: &StoryListState, stories: &[Story]) -> Option<Story> {
-    if let Some(idx) = state.selected_index {
-        stories.get(idx).cloned()
-    } else {
-        None
-    }
+    let id = state.selected_story_id?;
+    stories.iter().find(|s| s.id == id).cloned()
 }
 
 pub fn key_to_msg(key: KeyEvent) -> Option<StoryListMsg> {

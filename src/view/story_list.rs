@@ -112,7 +112,7 @@ impl<'a> WidgetRef for StoryListView<'a> {
             .highlight_style(highlight_style);
 
         let mut list_state = ListState::default();
-        list_state.select(self.state.selected_index);
+        list_state.select(self.state.selected_index(self.stories));
 
         custom_list.render(inner, buf, &mut list_state);
     }

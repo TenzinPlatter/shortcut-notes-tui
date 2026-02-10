@@ -180,8 +180,12 @@ pub async fn execute(
 
         Cmd::ActionMenuVisibility(enabled) => {
             model.ui.action_menu.is_showing = enabled;
-            if !enabled {
+            if enabled {
+                // Capture the currently selected story ID
+                model.ui.action_menu.target_story_id = model.ui.story_list.selected_story_id;
+            } else {
                 model.ui.action_menu.list_state.select(Some(0));
+                model.ui.action_menu.target_story_id = None;
             }
 
             Ok(())
