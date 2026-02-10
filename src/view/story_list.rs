@@ -86,15 +86,13 @@ impl<'a> WidgetRef for StoryListView<'a> {
         let story_rows: Vec<_> = self
             .stories
             .iter()
-            .enumerate()
-            .map(|(idx, story)| {
-                let is_expanded = self.state.expanded_items.contains(&idx);
+            .map(|story| {
                 let is_active = match self.active_story {
                     Some(active_story) => active_story.id == story.id,
                     None => false,
                 };
 
-                StoryRow::new(story, is_expanded, is_active)
+                StoryRow::new(story, is_active)
             })
             .collect();
 

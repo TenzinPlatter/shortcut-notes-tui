@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use throbber_widgets_tui::ThrobberState;
 
 use crate::{
@@ -85,11 +83,19 @@ pub struct DataState {
     pub active_story: Option<Story>,
 }
 
+#[derive(Clone, Default)]
+pub struct DescriptionModalState {
+    pub is_showing: bool,
+    pub scroll_offset: u16,
+    pub story: Option<Story>,
+}
+
 #[derive(Default)]
 pub struct UiState {
     pub active_view: ViewType,
     pub story_list: StoryListState,
     pub action_menu: ActionMenuState,
+    pub description_modal: DescriptionModalState,
     pub errors: Vec<ErrorInfo>,
     pub loading: LoadingState,
     pub throbber_state: ThrobberState,
@@ -99,7 +105,6 @@ pub struct UiState {
 #[derive(Clone, Default)]
 pub struct StoryListState {
     pub selected_index: Option<usize>,
-    pub expanded_items: HashSet<usize>,
 }
 
 impl DataState {

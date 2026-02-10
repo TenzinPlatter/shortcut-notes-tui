@@ -6,9 +6,10 @@ use crate::{
         cmd::Cmd,
         model::LoadingState,
         msg::Msg,
-        pane::{action_menu, story_list},
+        pane::{action_menu, description_modal, story_list},
     },
     dbg_file,
+    view::description_modal::DescriptionModal,
 };
 
 impl App {
@@ -121,10 +122,43 @@ impl App {
                     !self.model.ui.action_menu.is_showing,
                 )]
             }
+
+            Msg::DescriptionModal(modal_msg) => {
+                // Calculate dimensions for scroll bounds
+                // Use a reasonable default if we can't get terminal size
+                let (visible_height, total_lines) =
+                    if let Some(story) = &self.model.ui.description_modal.story {
+                        // Approximate based on typical terminal size
+                        // These will be recalculated properly during render
+                        let approx_height = 20u16;
+                        let approx_width = 60u16;
+                        let total =
+                            DescriptionModal::calculate_total_lines(&story.description, approx_width);
+                        (approx_height, total)
+                    } else {
+                        (20, 0)
+                    };
+
+                description_modal::update(
+                    &mut self.model.ui.description_modal,
+                    modal_msg,
+                    visible_height,
+                    total_lines,
+                )
+            }
         }
     }
 
     fn handle_key_input(&mut self, key: KeyEvent) -> Vec<Cmd> {
+        // Description modal takes priority (rendered on top of everything)
+        if self.model.ui.description_modal.is_showing {
+            return if let Some(msg) = description_modal::key_to_msg(key) {
+                self.update(Msg::DescriptionModal(msg))
+            } else {
+                vec![Cmd::None]
+            };
+        }
+
         // action menu is rendered as an overlay, so swallows all keybinds when showing
         if self.model.ui.action_menu.is_showing {
             return if let Some(msg) = action_menu::key_to_msg(key) {
@@ -149,6 +183,19 @@ impl App {
             }
 
             KeyCode::Enter => return self.update(Msg::ToggleActionMenu),
+
+            // Open description modal with Space
+            KeyCode::Char(' ') => {
+                if let Some(idx) = self.model.ui.story_list.selected_index
+                    && let Some(story) = self.model.data.stories.get(idx)
+                {
+                    description_modal::open(
+                        &mut self.model.ui.description_modal,
+                        story.clone(),
+                    );
+                }
+                return vec![Cmd::None];
+            }
 
             _ => {}
         }

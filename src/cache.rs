@@ -46,7 +46,7 @@ impl Cache {
         base
     }
 
-    fn get_cache_file(mut cache_dir: PathBuf) -> PathBuf {
+    pub fn get_cache_file(mut cache_dir: PathBuf) -> PathBuf {
         cache_dir.push("cache.json");
         cache_dir
     }

@@ -6,6 +6,7 @@ use tokio::sync::mpsc;
 
 use crate::app::pane::action_menu::ActionMenu;
 use crate::error::ERROR_NOTIFICATION_MAX_HEIGHT;
+use crate::view::description_modal::{centered_rect, DescriptionModal};
 use crate::view::{navbar::NavBar, story_list::StoryListView};
 use crate::{api::ApiClient, app::model::ViewType, config::Config};
 
@@ -133,6 +134,18 @@ impl App {
                 frame.buffer_mut(),
                 &mut self.model.ui.action_menu.list_state,
             );
+        }
+
+        // Render description modal (highest priority overlay before errors)
+        if self.model.ui.description_modal.is_showing
+            && let Some(story) = &self.model.ui.description_modal.story
+        {
+            let area = centered_rect(80, 80, frame.area());
+            frame.render_widget(Clear, area);
+
+            let modal =
+                DescriptionModal::new(story, self.model.ui.description_modal.scroll_offset);
+            frame.render_widget(modal, area);
         }
 
         self.draw_error(frame);

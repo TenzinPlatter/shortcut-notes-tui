@@ -11,20 +11,15 @@ use super::list::ListRow;
 
 /// Wrapper around Story that implements ListRow.
 /// This allows Story to be rendered in a CustomList while maintaining
-/// separation between the data model (Story) and view state (expanded/active).
+/// separation between the data model (Story) and view state (active).
 pub struct StoryRow<'a> {
     pub story: &'a Story,
-    pub expanded: bool,
     pub active: bool,
 }
 
 impl<'a> StoryRow<'a> {
-    pub fn new(story: &'a Story, expanded: bool, active: bool) -> Self {
-        Self {
-            story,
-            expanded,
-            active,
-        }
+    pub fn new(story: &'a Story, active: bool) -> Self {
+        Self { story, active }
     }
 }
 
@@ -51,32 +46,12 @@ impl ListRow for StoryRow<'_> {
             y += 1;
         }
 
-        // Render "Description:" label
+        // Render hint to view description
         if y < max_y {
-            let line = Line::from("Description:").style(base_style);
+            let line = Line::from("Press <Space> to view description")
+                .style(base_style.italic());
             buf.set_line(area.x, y, &line, area.width);
             y += 1;
-        }
-
-        // Render description content or expansion hint
-        if self.expanded {
-            // Render each line of the description with indentation
-            for desc_line in self.story.description.lines() {
-                if y >= max_y {
-                    break;
-                }
-                let line = Line::from(format!("  {}", desc_line)).style(base_style);
-                buf.set_line(area.x, y, &line, area.width);
-                y += 1;
-            }
-        } else {
-            // Render expansion hint
-            if y < max_y {
-                let line = Line::from("Press <Space> to view description")
-                .style(base_style.italic());
-                buf.set_line(area.x, y, &line, area.width);
-                y += 1;
-            }
         }
 
         // Render empty line at the end
@@ -87,14 +62,8 @@ impl ListRow for StoryRow<'_> {
     }
 
     fn height(&self) -> u16 {
-        // Story name (1) + "Description:" label (1) + content + empty line (1)
-        if self.expanded {
-            let description_lines = self.story.description.lines().count() as u16;
-            1 + 1 + description_lines + 1
-        } else {
-            // Story name (1) + "Description:" label (1) + hint (1) + empty line (1)
-            4
-        }
+        // Story name (1) + hint (1) + empty line (1)
+        3
     }
 }
 
@@ -117,33 +86,16 @@ mod tests {
     }
 
     #[test]
-    fn test_height_collapsed() {
+    fn test_height() {
         let story = create_test_story("Test Story", "Single line description");
-        let row = StoryRow::new(&story, false, false);
-        assert_eq!(row.height(), 4);
+        let row = StoryRow::new(&story, false);
+        assert_eq!(row.height(), 3);
     }
 
     #[test]
-    fn test_height_expanded_single_line() {
-        let story = create_test_story("Test Story", "Single line description");
-        let row = StoryRow::new(&story, true, false);
-        // 1 (name) + 1 (label) + 1 (description) + 1 (empty) = 4
-        assert_eq!(row.height(), 4);
-    }
-
-    #[test]
-    fn test_height_expanded_multi_line() {
-        let story = create_test_story("Test Story", "Line 1\nLine 2\nLine 3");
-        let row = StoryRow::new(&story, true, false);
-        // 1 (name) + 1 (label) + 3 (description lines) + 1 (empty) = 6
-        assert_eq!(row.height(), 6);
-    }
-
-    #[test]
-    fn test_height_expanded_empty_description() {
-        let story = create_test_story("Test Story", "");
-        let row = StoryRow::new(&story, true, false);
-        // 1 (name) + 1 (label) + 0 (no description lines) + 1 (empty) = 3
+    fn test_height_active() {
+        let story = create_test_story("Test Story", "Description");
+        let row = StoryRow::new(&story, true);
         assert_eq!(row.height(), 3);
     }
 }

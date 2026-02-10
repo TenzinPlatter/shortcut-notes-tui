@@ -9,6 +9,7 @@ pub enum Msg {
     KeyPressed(KeyEvent),
     StoryList(StoryListMsg),
     ActionMenu(ActionMenuMsg),
+    DescriptionModal(DescriptionModalMsg),
     StoriesLoaded {
         stories: Vec<Story>,
         from_cache: bool,
@@ -27,7 +28,6 @@ pub enum Msg {
 pub enum StoryListMsg {
     FocusNext,
     FocusPrev,
-    ToggleExpand,
     OpenNote,
     SelectStory,
     TmuxEnter,
@@ -40,4 +40,16 @@ pub enum ActionMenuMsg {
     FocusPrev,
     Accept,
     Close,
+}
+
+#[derive(Debug, Clone)]
+pub enum DescriptionModalMsg {
+    Open,
+    Close,
+    ScrollUp,
+    ScrollDown,
+    ScrollHalfPageUp,
+    ScrollHalfPageDown,
+    ScrollToTop,
+    ScrollToBottom,
 }

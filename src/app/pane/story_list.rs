@@ -46,17 +46,6 @@ pub fn update(
             vec![Cmd::None]
         }
 
-        StoryListMsg::ToggleExpand => {
-            if let Some(idx) = state.selected_index {
-                if state.expanded_items.contains(&idx) {
-                    state.expanded_items.remove(&idx);
-                } else {
-                    state.expanded_items.insert(idx);
-                }
-            }
-            vec![Cmd::None]
-        }
-
         StoryListMsg::OpenNote => {
             if let Some(story) = get_selected_story(state, stories) {
                 let iteration_app_url = current_iterations
@@ -114,7 +103,6 @@ pub fn key_to_msg(key: KeyEvent) -> Option<StoryListMsg> {
     match key.code {
         navkey!(down) => Some(StoryListMsg::FocusNext),
         navkey!(up) => Some(StoryListMsg::FocusPrev),
-        KeyCode::Char(' ') => Some(StoryListMsg::ToggleExpand),
         _ => None,
     }
 }

@@ -1,4 +1,4 @@
-use std::process::{Command, Output};
+use std::{fs, process::{Command, Output}};
 
 use crossterm::{
     ExecutableCommand,
@@ -65,7 +65,9 @@ pub async fn handle_command(
             if let Some(story) = &cache.active_story {
                 let iteration_app_url = cache
                     .current_iterations_ref()
-                    .and_then(|iterations| get_story_associated_iteration(story.iteration_id, iterations))
+                    .and_then(|iterations| {
+                        get_story_associated_iteration(story.iteration_id, iterations)
+                    })
                     .map(|it| it.app_url.clone());
 
                 open_note_in_editor(
@@ -85,6 +87,11 @@ pub async fn handle_command(
                 let session_name = Story::tmux_session_name(&story.name);
                 open_tmux_session(&session_name).await?;
             }
+        }
+
+        Commands::ClearCache => {
+            let cache_file = Cache::get_cache_file(config.cache_dir.clone());
+            fs::remove_file(cache_file)?;
         }
     }
 
