@@ -36,7 +36,7 @@ pub enum Cmd {
     },
     WriteCache,
     FetchStories {
-        iteration_id: i32,
+        iteration_ids: Vec<i32>,
     },
     EditStoryContent {
         story_id: i32,
@@ -89,15 +89,12 @@ pub async fn execute(
             Ok(())
         }
 
-        Cmd::FetchStories { iteration_id } => {
+        Cmd::FetchStories { iteration_ids } => {
             let sender = sender.clone();
             let api_client = api_client.clone();
 
             tokio::spawn(async move {
-                match api_client
-                    .get_owned_iteration_stories(vec![iteration_id])
-                    .await
-                {
+                match api_client.get_owned_iteration_stories(iteration_ids).await {
                     Ok(stories) => {
                         sender
                             .send(Msg::StoriesLoaded {

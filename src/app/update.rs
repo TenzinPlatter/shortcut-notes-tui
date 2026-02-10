@@ -63,40 +63,25 @@ impl App {
                 self.model.data.stories = stories.clone();
 
                 // Reconcile selection: if selected story no longer exists, select first
-                if let Some(selected_id) = self.model.ui.story_list.selected_story_id {
-                    if !stories.iter().any(|s| s.id == selected_id) {
-                        self.model.ui.story_list.selected_story_id = stories.first().map(|s| s.id);
-                    }
+                if let Some(selected_id) = self.model.ui.story_list.selected_story_id
+                    && !stories.iter().any(|s| s.id == selected_id)
+                {
+                    self.model.ui.story_list.selected_story_id = stories.first().map(|s| s.id);
                 }
 
                 // Reconcile description modal
-                if self.model.ui.description_modal.is_showing {
-                    if let Some(ref modal_story) = self.model.ui.description_modal.story {
-                        match stories.iter().find(|s| s.id == modal_story.id) {
-                            Some(fresh_story) => {
-                                // Update modal with fresh data
-                                self.model.ui.description_modal.story = Some(fresh_story.clone());
-                            }
-                            None => {
-                                // Story gone — close modal, show error
-                                self.model.ui.description_modal.is_showing = false;
-                                self.model.ui.description_modal.story = None;
-                                self.model.ui.errors.push(ErrorInfo::new(
-                                    "Story no longer available".to_string(),
-                                    "The story was removed or moved out of this iteration".to_string(),
-                                ));
-                            }
+                if self.model.ui.description_modal.is_showing
+                    && let Some(ref modal_story) = self.model.ui.description_modal.story
+                {
+                    match stories.iter().find(|s| s.id == modal_story.id) {
+                        Some(fresh_story) => {
+                            // Update modal with fresh data
+                            self.model.ui.description_modal.story = Some(fresh_story.clone());
                         }
-                    }
-                }
-
-                // Reconcile action menu
-                if self.model.ui.action_menu.is_showing {
-                    if let Some(target_id) = self.model.ui.action_menu.target_story_id {
-                        if !stories.iter().any(|s| s.id == target_id) {
-                            // Story gone — close menu, show error
-                            self.model.ui.action_menu.is_showing = false;
-                            self.model.ui.action_menu.target_story_id = None;
+                        None => {
+                            // Story gone — close modal, show error
+                            self.model.ui.description_modal.is_showing = false;
+                            self.model.ui.description_modal.story = None;
                             self.model.ui.errors.push(ErrorInfo::new(
                                 "Story no longer available".to_string(),
                                 "The story was removed or moved out of this iteration".to_string(),
@@ -105,17 +90,31 @@ impl App {
                     }
                 }
 
+                // Reconcile action menu
+                if self.model.ui.action_menu.is_showing
+                    && let Some(target_id) = self.model.ui.action_menu.target_story_id
+                    && !stories.iter().any(|s| s.id == target_id)
+                {
+                    // Story gone — close menu, show error
+                    self.model.ui.action_menu.is_showing = false;
+                    self.model.ui.action_menu.target_story_id = None;
+                    self.model.ui.errors.push(ErrorInfo::new(
+                        "Story no longer available".to_string(),
+                        "The story was removed or moved out of this iteration".to_string(),
+                    ));
+                }
+
                 // Reconcile active story
-                if let Some(ref active) = self.model.data.active_story {
-                    if !stories.iter().any(|s| s.id == active.id) {
-                        // Active story no longer in iteration — clear it
-                        self.model.data.active_story = None;
-                        self.model.cache.active_story = None;
-                        self.model.ui.errors.push(ErrorInfo::new(
-                            "Active story cleared".to_string(),
-                            "The active story is no longer in the current iteration".to_string(),
-                        ));
-                    }
+                if let Some(ref active) = self.model.data.active_story
+                    && !stories.iter().any(|s| s.id == active.id)
+                {
+                    // Active story no longer in iteration — clear it
+                    self.model.data.active_story = None;
+                    self.model.cache.active_story = None;
+                    self.model.ui.errors.push(ErrorInfo::new(
+                        "Active story cleared".to_string(),
+                        "The active story is no longer in the current iteration".to_string(),
+                    ));
                 }
 
                 self.model.cache.iteration_stories = Some(stories);
@@ -133,14 +132,12 @@ impl App {
                 self.model.cache.current_iterations = Some(iterations.clone());
                 self.model.ui.loading = LoadingState::FetchingStories;
 
-                let mut res = vec![Cmd::WriteCache];
-                for iteration in iterations.iter() {
-                    res.push(Cmd::FetchStories {
-                        iteration_id: iteration.id,
-                    });
-                }
-
-                res
+                vec![
+                    Cmd::WriteCache,
+                    Cmd::FetchStories {
+                        iteration_ids: iterations.iter().map(|it| it.id).collect(),
+                    },
+                ]
             }
 
             Msg::SwitchToView(view_type) => {
@@ -162,9 +159,12 @@ impl App {
             }
 
             Msg::ActionMenu(menu_msg) => {
-                let story = self.model.ui.action_menu.target_story_id.and_then(|id| {
-                    self.model.data.stories.iter().find(|s| s.id == id)
-                });
+                let story = self
+                    .model
+                    .ui
+                    .action_menu
+                    .target_story_id
+                    .and_then(|id| self.model.data.stories.iter().find(|s| s.id == id));
 
                 if let Some(hovered_story) = story {
                     action_menu::update(
@@ -189,18 +189,19 @@ impl App {
             Msg::DescriptionModal(modal_msg) => {
                 // Calculate dimensions for scroll bounds
                 // Use a reasonable default if we can't get terminal size
-                let (visible_height, total_lines) =
-                    if let Some(story) = &self.model.ui.description_modal.story {
-                        // Approximate based on typical terminal size
-                        // These will be recalculated properly during render
-                        let approx_height = 20u16;
-                        let approx_width = 60u16;
-                        let total =
-                            DescriptionModal::calculate_total_lines(&story.description, approx_width);
-                        (approx_height, total)
-                    } else {
-                        (20, 0)
-                    };
+                let (visible_height, total_lines) = if let Some(story) =
+                    &self.model.ui.description_modal.story
+                {
+                    // Approximate based on typical terminal size
+                    // These will be recalculated properly during render
+                    let approx_height = 20u16;
+                    let approx_width = 60u16;
+                    let total =
+                        DescriptionModal::calculate_total_lines(&story.description, approx_width);
+                    (approx_height, total)
+                } else {
+                    (20, 0)
+                };
 
                 description_modal::update(
                     &mut self.model.ui.description_modal,
@@ -249,15 +250,15 @@ impl App {
 
             // Open description modal with Space
             KeyCode::Char(' ') => {
-                let story = self.model.ui.story_list.selected_story_id.and_then(|id| {
-                    self.model.data.stories.iter().find(|s| s.id == id)
-                });
+                let story = self
+                    .model
+                    .ui
+                    .story_list
+                    .selected_story_id
+                    .and_then(|id| self.model.data.stories.iter().find(|s| s.id == id));
 
                 if let Some(story) = story {
-                    description_modal::open(
-                        &mut self.model.ui.description_modal,
-                        story.clone(),
-                    );
+                    description_modal::open(&mut self.model.ui.description_modal, story.clone());
                 }
                 return vec![Cmd::None];
             }

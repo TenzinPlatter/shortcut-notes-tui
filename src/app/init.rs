@@ -1,12 +1,8 @@
-use anyhow::{Context, Result};
-use chrono::Utc;
+use anyhow::Result;
 use tokio::sync::mpsc;
 
 use crate::{
-    api::{
-        ApiClient,
-        iteration::{self, Iteration},
-    },
+    api::ApiClient,
     app::{
         App,
         model::{DataState, Model, UiState},
@@ -51,13 +47,11 @@ impl App {
             cache,
         };
 
-        let saved_stories = model.cache.iteration_stories.clone();
         let api_client_clone = api_client.clone();
         tokio::spawn(async move {
-            let iterations = match api_client_clone.get_current_iterations().await {
+            match api_client_clone.get_current_iterations().await {
                 Ok(iterations) => {
-                    let _ = sender.send(Msg::IterationsLoaded(iterations.clone()));
-                    iterations
+                    let _ = sender.send(Msg::IterationsLoaded(iterations));
                 }
                 Err(e) => {
                     let info = ErrorInfo::new(
@@ -66,34 +60,8 @@ impl App {
                     );
 
                     let _ = sender.send(Msg::Error(info));
-                    return;
                 }
             };
-
-            if let Some(stories) = saved_stories {
-                let _ = sender.send(Msg::StoriesLoaded {
-                    stories,
-                    from_cache: true,
-                });
-            }
-
-            let ids = iterations.iter().map(|it| it.id).collect();
-            match api_client_clone.get_owned_iteration_stories(ids).await {
-                Ok(stories) => {
-                    let _ = sender.send(Msg::StoriesLoaded {
-                        stories,
-                        from_cache: false,
-                    });
-                }
-                Err(e) => {
-                    let info = ErrorInfo::new(
-                        "Failed to get stories for current iteration".to_string(),
-                        e.to_string(),
-                    );
-
-                    let _ = sender.send(Msg::Error(info));
-                }
-            }
         });
 
         Ok(Self {
