@@ -51,7 +51,7 @@ pub fn update(
         }
 
         StoryListMsg::OpenNote => {
-            if let Some(story) = get_selected_story(state, stories) {
+            if let Some(story) = get_hovered_story(state, stories) {
                 let iteration_app_url = current_iterations
                     .and_then(|iterations| get_story_associated_iteration(story.iteration_id, iterations))
                     .map(|it| it.app_url.clone());
@@ -67,13 +67,13 @@ pub fn update(
         }
 
         StoryListMsg::SelectStory => {
-            let story = get_selected_story(state, stories);
+            let story = get_hovered_story(state, stories);
             dbg_file!("Setting story: {:?} to active", story);
             vec![Cmd::SelectStory(story), Cmd::WriteCache]
         }
 
         StoryListMsg::TmuxEnter => {
-            if let Some(story) = get_selected_story(state, stories) {
+            if let Some(story) = get_hovered_story(state, stories) {
                 vec![Cmd::OpenTmuxSession {
                     story_name: story.name.clone(),
                 }]
@@ -83,7 +83,7 @@ pub fn update(
         }
 
         StoryListMsg::EditStoryContents => {
-            if let Some(story) = get_selected_story(state, stories) {
+            if let Some(story) = get_hovered_story(state, stories) {
                 vec![Cmd::EditStoryContent {
                     story_id: story.id,
                     description: story.description.clone(),
@@ -92,10 +92,18 @@ pub fn update(
                 vec![Cmd::None]
             }
         }
+
+        StoryListMsg::OpenInBrowser => {
+            if let Some(story) = get_hovered_story(state, stories) {
+                vec![Cmd::OpenInBrowser { app_url: story.app_url.clone() }]
+            } else {
+                vec![Cmd::None]
+            }
+        }
     }
 }
 
-fn get_selected_story(state: &StoryListState, stories: &[Story]) -> Option<Story> {
+fn get_hovered_story(state: &StoryListState, stories: &[Story]) -> Option<Story> {
     let id = state.selected_story_id?;
     stories.iter().find(|s| s.id == id).cloned()
 }
@@ -104,6 +112,7 @@ pub fn key_to_msg(key: KeyEvent) -> Option<StoryListMsg> {
     match key.code {
         navkey!(down) => Some(StoryListMsg::FocusNext),
         navkey!(up) => Some(StoryListMsg::FocusPrev),
+        KeyCode::Char('o') => Some(StoryListMsg::OpenInBrowser),
         _ => None,
     }
 }
