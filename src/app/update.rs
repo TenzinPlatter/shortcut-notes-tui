@@ -1,4 +1,4 @@
-use crossterm::event::{KeyCode, KeyEvent};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
 use crate::{
     app::{
@@ -218,10 +218,6 @@ impl App {
     }
 
     fn handle_key_input(&mut self, key: KeyEvent) -> Vec<Cmd> {
-        if matches!(key.code, KeyCode::Char('d')) {
-            dbg_file!("{:?}", self.model);
-        }
-
         // Description modal takes priority (rendered on top of everything)
         if self.model.ui.description_modal.is_showing {
             return if let Some(msg) = description_modal::key_to_msg(key) {
@@ -240,9 +236,11 @@ impl App {
             };
         }
 
-        match key.code {
-            KeyCode::Char('q') => return self.update(Msg::Quit),
+        if should_quit(&key) {
+            return self.update(Msg::Quit);
+        }
 
+        match key.code {
             // View switching (Tab/Shift+Tab)
             KeyCode::Tab => {
                 let next_view = self.model.ui.active_view.next();
@@ -281,4 +279,9 @@ impl App {
 
         vec![Cmd::None]
     }
+}
+
+fn should_quit(key: &KeyEvent) -> bool {
+    matches!(key.code, KeyCode::Char('q'))
+        || (matches!(key.code, KeyCode::Char('c')) && key.modifiers.contains(KeyModifiers::CONTROL))
 }

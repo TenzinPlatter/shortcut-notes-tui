@@ -4,6 +4,7 @@
 - [ ] Move action menu to use custom list
 - [ ] Fix active story not saving properly
 - [ ] Ask task queue with notifications for async tasks like api fetching etc. should be able to display multiple tasks at once
+- [ ] Make api fetching quit automatically if closing tui before they are finished
 
 - [x] Make fzf for git worktree cancellable without crashing
 - [x] notes system
@@ -16,10 +17,14 @@
 - [x] Move active_story out of story list state into data state
 - [x] Keybind to open ticket in browser
 
-- add shortcut integration:
+- [ ] add shortcut integration:
   - [ ] Edit ticket comments
   - [ ] attach note as file to ticket
   - [ ] Change ticket state
   - [ ] Update days taken (do automatically when putting ticket to finished?)
   - [ ] TODO: add todo points for epic/iteration integration
   - [x] Edit ticket description
+
+- [ ] windows:
+  - [ ] Search
+  - [ ] Filters - based on what is showing
