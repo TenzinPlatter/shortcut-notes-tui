@@ -20,6 +20,7 @@ use crate::{
     navkey,
 };
 
+#[derive(Debug)]
 pub struct ActionMenuState {
     pub list_state: ListState,
     pub is_showing: bool,

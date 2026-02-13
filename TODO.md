@@ -11,9 +11,13 @@
 - [ ] Add (fuzzy?) search functionality to action_menu, and numbers? Could be like code actions
 - [ ] Move action menu to use custom list
 - [ ] Keybind to open ticket in browser
+- [ ] Fix active story not saving properly
+- [ ] Make fzf for git worktree cancellable without crashing
+- [ ] Ask task queue with notifications for async tasks like api fetching etc. should be able to display multiple tasks at once
 - add shortcut integration:
   - [x] Edit ticket description
   - [ ] Edit ticket comments
+  - [ ] attach note as file to ticket
   - [ ] Change ticket state
   - [ ] Update days taken (do automatically when putting ticket to finished?)
   - [ ] TODO: add todo points for epic/iteration integration

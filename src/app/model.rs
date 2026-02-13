@@ -68,6 +68,7 @@ impl ViewType {
     }
 }
 
+#[derive(Debug)]
 pub struct Model {
     pub data: DataState,
     pub ui: UiState,
@@ -75,7 +76,7 @@ pub struct Model {
     pub cache: Cache,
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct DataState {
     pub stories: Vec<Story>,
     pub epics: Vec<Epic>,
@@ -83,14 +84,14 @@ pub struct DataState {
     pub active_story: Option<Story>,
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct DescriptionModalState {
     pub is_showing: bool,
     pub scroll_offset: u16,
     pub story: Option<Story>,
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct UiState {
     pub active_view: ViewType,
     pub story_list: StoryListState,
@@ -101,8 +102,7 @@ pub struct UiState {
     pub throbber_state: ThrobberState,
 }
 
-
-#[derive(Clone, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct StoryListState {
     pub selected_story_id: Option<i32>,
 }
@@ -118,5 +118,23 @@ impl StoryListState {
 impl DataState {
     pub fn current_iterations_ref(&self) -> Option<Vec<&Iteration>> {
         self.current_iterations.as_ref().map(|v| v.iter().collect())
+    }
+}
+
+impl Model {
+    pub fn from_cache_and_config(cache: Cache, config: Config) -> Model {
+        let mut model = Model {
+            data: DataState {
+                stories: cache.iteration_stories.clone().unwrap_or_default(),
+                epics: vec![],
+                current_iterations: cache.current_iterations.clone(),
+                active_story: cache.active_story.clone(),
+            },
+            ui: UiState::default(),
+            config,
+            cache,
+        };
+        model.ui.story_list.selected_story_id = model.data.stories.first().map(|s| s.id);
+        model
     }
 }

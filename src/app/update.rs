@@ -132,6 +132,10 @@ impl App {
                 self.model.cache.current_iterations = Some(iterations.clone());
                 self.model.ui.loading = LoadingState::FetchingStories;
 
+                dbg_file!(
+                    "Got iterations: {:?}",
+                    iterations.iter().map(|it| it.id).collect::<Vec<_>>()
+                );
                 vec![
                     Cmd::WriteCache,
                     Cmd::FetchStories {
@@ -214,6 +218,10 @@ impl App {
     }
 
     fn handle_key_input(&mut self, key: KeyEvent) -> Vec<Cmd> {
+        if matches!(key.code, KeyCode::Char('d')) {
+            dbg_file!("{:?}", self.model);
+        }
+
         // Description modal takes priority (rendered on top of everything)
         if self.model.ui.description_modal.is_showing {
             return if let Some(msg) = description_modal::key_to_msg(key) {

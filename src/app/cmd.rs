@@ -83,7 +83,6 @@ pub async fn execute(
         }
 
         Cmd::WriteCache => {
-            dbg_file!("Writing cache with: {:?}", model.cache.active_story);
             model.cache.write()?;
             sender.send(Msg::CacheWritten).ok();
             Ok(())
@@ -151,10 +150,10 @@ pub async fn execute(
         }
 
         Cmd::EditStoryContent {
-            story_id: _,
+            story_id,
             description,
         } => {
-            // NOTE: this only works for editors that run from their process, i.e. code spawns the
+            // TODO: this only works for editors that run from their process, i.e. code spawns the
             // vscode gui, then ends itself, will not work as it is now
             let mut tempfile = NamedTempFile::new()?;
             tempfile.write_all(description.as_bytes())?;
@@ -170,7 +169,8 @@ pub async fn execute(
             enable_raw_mode()?;
             terminal.clear()?;
 
-            // TODO: update story description
+            let contents = read_to_string(tmp_path)?;
+            api_client.update_story_description(story_id, contents).await?;
 
             Ok(())
         }

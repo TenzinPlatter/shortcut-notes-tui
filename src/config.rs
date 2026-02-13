@@ -6,7 +6,7 @@ use std::{
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Config {
     pub notes_dir: PathBuf,
     pub cache_dir: PathBuf,

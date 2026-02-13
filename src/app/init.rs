@@ -1,5 +1,6 @@
 use anyhow::Result;
 use tokio::sync::mpsc;
+use uuid::Uuid;
 
 use crate::{
     api::ApiClient,
@@ -35,18 +36,7 @@ impl App {
         let (sender, receiver) = mpsc::unbounded_channel();
         let sender_clone = sender.clone();
 
-        let model = Model {
-            data: DataState {
-                stories: cache.iteration_stories.clone().unwrap_or_default(),
-                epics: vec![],
-                current_iterations: cache.current_iterations.clone(),
-                active_story: cache.active_story.clone(),
-            },
-            ui: UiState::default(),
-            config: config.clone(),
-            cache,
-        };
-
+        let model = Model::from_cache_and_config(cache, config.clone());
         let api_client_clone = api_client.clone();
         tokio::spawn(async move {
             match api_client_clone.get_current_iterations().await {
@@ -75,8 +65,6 @@ impl App {
     }
 
     async fn init_with_dummy_data(config: Config, mut cache: Cache) -> Result<Self> {
-        use uuid::Uuid;
-
         let dummy_user_id = Uuid::nil();
         let api_client = ApiClient::new(config.api_token.to_owned(), dummy_user_id);
 

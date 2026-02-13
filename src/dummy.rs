@@ -5,7 +5,7 @@ use chrono::Utc;
 use crate::api::{iteration::Iteration, story::Story};
 
 pub fn is_enabled() -> bool {
-    std::env::var("DUMMY_DATA").is_ok()
+    std::env::var("DUMMY_DATA").is_ok_and(|val| val == "1")
 }
 
 pub fn iteration() -> Iteration {

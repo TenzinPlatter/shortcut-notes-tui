@@ -25,7 +25,7 @@ pub fn get_full_path(endpoint: &str) -> String {
 }
 
 impl ApiClient {
-    pub async fn put_with_body<Body>(&self, endpoint: &str, body: &Body) -> anyhow::Result<Response>
+    async fn put_with_body<Body>(&self, endpoint: &str, body: &Body) -> anyhow::Result<Response>
     where
         Body: Serialize,
     {
@@ -37,7 +37,7 @@ impl ApiClient {
             .with_context(|| format!("Failed to PUT {} with body", &full_path))
     }
 
-    pub async fn post_with_body<Body>(
+    async fn post_with_body<Body>(
         &self,
         endpoint: &str,
         body: &Body,
@@ -53,7 +53,7 @@ impl ApiClient {
             .with_context(|| format!("Failed to POST {} with body", &full_path))
     }
 
-    pub async fn get_with_body<Body>(&self, endpoint: &str, body: &Body) -> anyhow::Result<Response>
+    async fn get_with_body<Body>(&self, endpoint: &str, body: &Body) -> anyhow::Result<Response>
     where
         Body: Serialize,
     {
@@ -65,7 +65,7 @@ impl ApiClient {
             .with_context(|| format!("Failed to GET {} with body", &full_path))
     }
 
-    pub async fn get(&self, endpoint: &str) -> anyhow::Result<Response> {
+    async fn get(&self, endpoint: &str) -> anyhow::Result<Response> {
         let full_path = get_full_path(endpoint);
         self.get_request(&full_path)
             .send()

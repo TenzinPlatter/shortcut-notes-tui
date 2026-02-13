@@ -13,7 +13,7 @@ use crate::{
     dbg_file,
 };
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct Cache {
     pub current_iterations: Option<Vec<Iteration>>,
     pub iteration_stories: Option<Vec<Story>>,

@@ -58,7 +58,7 @@ impl ApiClient {
 
     pub async fn update_story_description(
         &self,
-        story: &Story,
+        story_id: i32,
         new_description: String,
     ) -> anyhow::Result<()> {
         let body = serde_json::json!({
@@ -66,7 +66,7 @@ impl ApiClient {
         });
 
         let response = self
-            .put_with_body(&format!("stories/{}", story.id), &body)
+            .put_with_body(&format!("stories/{}", story_id), &body)
             .await?;
 
         // ignore the returned Story, we don't need and no need to parse the body of the response
