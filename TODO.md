@@ -1,5 +1,11 @@
 # TODO
 
+- [ ] Add (fuzzy?) search functionality to action_menu, and numbers? Could be like code actions
+- [ ] Move action menu to use custom list
+- [ ] Fix active story not saving properly
+- [ ] Ask task queue with notifications for async tasks like api fetching etc. should be able to display multiple tasks at once
+
+- [x] Make fzf for git worktree cancellable without crashing
 - [x] notes system
 - [x] move cache out of ~/.config
 - [x] add borders between list items (this requires rewriting the List widget)
@@ -8,16 +14,12 @@
 - [x] Refactor msgs/cmds to not take entire Story/Iteration objects, just what is needed to avoid cloning everything
 - [x] Handle multiple active iterations
 - [x] Move active_story out of story list state into data state
-- [ ] Add (fuzzy?) search functionality to action_menu, and numbers? Could be like code actions
-- [ ] Move action menu to use custom list
 - [x] Keybind to open ticket in browser
-- [ ] Fix active story not saving properly
-- [ ] Make fzf for git worktree cancellable without crashing
-- [ ] Ask task queue with notifications for async tasks like api fetching etc. should be able to display multiple tasks at once
+
 - add shortcut integration:
-  - [x] Edit ticket description
   - [ ] Edit ticket comments
   - [ ] attach note as file to ticket
   - [ ] Change ticket state
   - [ ] Update days taken (do automatically when putting ticket to finished?)
   - [ ] TODO: add todo points for epic/iteration integration
+  - [x] Edit ticket description

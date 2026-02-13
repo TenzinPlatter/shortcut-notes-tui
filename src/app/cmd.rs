@@ -195,7 +195,17 @@ pub async fn execute(
 
         Cmd::CreateGitWorktree { branch_name } => {
             let repos = get_repo_list(&model.config).await?;
-            let chosen = select_repo_with_fzf(&repos, terminal)?;
+            let chosen = match select_repo_with_fzf(&repos, terminal) {
+                Ok(repo) => repo,
+                Err(e) => {
+                    model
+                        .ui
+                        .errors
+                        .push(ErrorInfo::new("Failed to get repo for worktree", e));
+                    return Ok(());
+                }
+            };
+
             let path = model.config.repositories_directory.join(chosen);
             create_worktree(&path, &branch_name).await?;
 
