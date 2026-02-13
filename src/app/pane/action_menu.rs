@@ -98,6 +98,7 @@ pub enum ActionMenuItem {
     OpenTmux,
     SetActive,
     CreateGitWorktree,
+    OpenInBrowser,
 }
 
 impl ActionMenuItem {
@@ -107,6 +108,7 @@ impl ActionMenuItem {
         Self::OpenTmux,
         Self::EditDescription,
         Self::SetActive,
+        Self::OpenInBrowser,
     ];
 
     pub fn from_idx(idx: usize) -> ActionMenuItem {
@@ -120,6 +122,7 @@ impl ActionMenuItem {
             Self::OpenTmux => "Open Tmux Session",
             Self::SetActive => "Set as Active Story",
             Self::CreateGitWorktree => "Create git worktree",
+            Self::OpenInBrowser => "Open ticket in browser",
         }
     }
 }
@@ -167,7 +170,9 @@ pub fn update(
                 ActionMenuItem::OpenNote => {
                     let iteration_app_url = data_state
                         .current_iterations_ref()
-                        .and_then(|iterations| get_story_associated_iteration(story.iteration_id, iterations))
+                        .and_then(|iterations| {
+                            get_story_associated_iteration(story.iteration_id, iterations)
+                        })
                         .map(|it| it.app_url.clone());
 
                     vec![Cmd::OpenNote {
@@ -199,6 +204,12 @@ pub fn update(
                     // TODO: figure out how to get actual branch name
                     vec![Cmd::CreateGitWorktree {
                         branch_name: "feat/branchname".to_string(),
+                    }]
+                }
+
+                ActionMenuItem::OpenInBrowser => {
+                    vec![Cmd::OpenInBrowser {
+                        app_url: story.app_url.clone(),
                     }]
                 }
             };

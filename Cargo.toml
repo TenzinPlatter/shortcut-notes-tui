@@ -33,6 +33,7 @@ unicode-ellipsis = "0.3.0"
 tempfile = "3.24.0"
 which = "8.0.0"
 throbber-widgets-tui = "0.10.0"
+open = "5.3.3"
 
 [profile.release]
 opt-level = "s"

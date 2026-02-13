@@ -1,6 +1,6 @@
 use std::io::{Stdout, Write};
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use crossterm::ExecutableCommand;
 use crossterm::terminal::{
     EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode,
@@ -52,6 +52,9 @@ pub enum Cmd {
         story_name: String,
     },
     Batch(Vec<Cmd>),
+    OpenInBrowser {
+        app_url: String,
+    },
 }
 
 pub async fn execute(
@@ -170,7 +173,9 @@ pub async fn execute(
             terminal.clear()?;
 
             let contents = read_to_string(tmp_path)?;
-            api_client.update_story_description(story_id, contents).await?;
+            api_client
+                .update_story_description(story_id, contents)
+                .await?;
 
             Ok(())
         }
@@ -195,6 +200,10 @@ pub async fn execute(
             create_worktree(&path, &branch_name).await?;
 
             Ok(())
+        }
+
+        Cmd::OpenInBrowser { app_url } => {
+            open::that(&app_url).with_context(|| format!("Failed to open {} in browser", app_url))
         }
     }
 }
