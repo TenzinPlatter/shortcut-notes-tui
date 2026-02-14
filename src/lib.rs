@@ -1,5 +1,9 @@
-use std::{fs, process::{Command, Output}};
+use std::{
+    fs,
+    process::{Command, Output},
+};
 
+use anyhow::Context;
 use crossterm::{
     ExecutableCommand,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
@@ -36,6 +40,12 @@ pub mod view;
 pub mod worktree;
 #[macro_use]
 pub mod keys;
+
+macro_rules! no_active_story {
+    () => {
+        anyhow::bail!("You do not have a currently active story");
+    };
+}
 
 pub async fn get_user_id(saved_user_id: Option<Uuid>, api_token: &str) -> anyhow::Result<Uuid> {
     let id = if let Some(id) = saved_user_id {
@@ -77,8 +87,10 @@ pub async fn handle_command(
                     iteration_app_url,
                     config,
                 )?;
+
+                Ok(())
             } else {
-                anyhow::bail!("You do not have a currently active story");
+                no_active_story!();
             }
         }
 
@@ -86,16 +98,27 @@ pub async fn handle_command(
             if let Some(story) = &cache.active_story {
                 let session_name = Story::tmux_session_name(&story.name);
                 open_tmux_session(&session_name).await?;
+                Ok(())
+            } else {
+                no_active_story!();
             }
         }
 
         Commands::ClearCache => {
             let cache_file = Cache::get_cache_file(config.cache_dir.clone());
             fs::remove_file(cache_file)?;
+            Ok(())
+        }
+
+        Commands::Open => {
+            if let Some(story) = &cache.active_story {
+                open::that(story.app_url.clone())
+                    .with_context(|| format!("Failed to open {}", story.app_url))
+            } else {
+                no_active_story!();
+            }
         }
     }
-
-    Ok(())
 }
 
 pub fn execute_for_output(

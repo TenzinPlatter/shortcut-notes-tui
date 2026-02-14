@@ -16,6 +16,9 @@ pub enum Commands {
     #[command(alias = "t")]
     Tmux,
 
-    #[command(alias ="clear")]
+    #[command(alias = "clear")]
     ClearCache,
+
+    #[command(alias = "o")]
+    Open,
 }
