@@ -1,4 +1,4 @@
-use chrono::{Duration, NaiveDateTime, Utc};
+use chrono::{Duration, NaiveDateTime};
 use ratatui::{
     buffer::Buffer,
     layout::{HorizontalAlignment, Rect},
@@ -41,7 +41,7 @@ impl ErrorInfo {
     }
 
     pub fn is_expired(&self) -> bool {
-        Utc::now().naive_utc() > self.created_at + Duration::seconds(3)
+        crate::time::now_naive() > self.created_at + Duration::seconds(3)
     }
 
     pub fn new<A, B>(short: A, long: B) -> ErrorInfo
@@ -52,7 +52,7 @@ impl ErrorInfo {
         ErrorInfo {
             short: short.to_string(),
             long: long.to_string(),
-            created_at: Utc::now().naive_utc(),
+            created_at: crate::time::now_naive(),
         }
     }
 }

@@ -1,6 +1,6 @@
 //! Dummy data for development/testing. Enable with DUMMY_DATA=1 env var.
 
-use chrono::Utc;
+use crate::time;
 
 use crate::api::{iteration::Iteration, story::Story};
 
@@ -9,7 +9,7 @@ pub fn is_enabled() -> bool {
 }
 
 pub fn iteration() -> Iteration {
-    let today = Utc::now().date_naive();
+    let today = time::today();
     Iteration {
         id: -1,
         name: "Sprint 42".to_string(),

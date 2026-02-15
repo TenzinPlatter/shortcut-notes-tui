@@ -4,8 +4,6 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use chrono::Utc;
-
 use crate::note::frontmatter::Frontmatter;
 
 pub mod frontmatter;
@@ -23,8 +21,6 @@ impl Note {
         story_app_url: String,
         iteration_app_url: Option<String>,
     ) -> Self {
-        let _now = Utc::now();
-
         let frontmatter = Frontmatter::new(story_id, story_name, story_app_url, iteration_app_url);
         let mut path = PathBuf::from(notes_dir.as_ref());
         // TODO: date + don't create a new note at each time

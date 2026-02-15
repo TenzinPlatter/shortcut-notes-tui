@@ -1,5 +1,5 @@
 use anyhow::Context;
-use chrono::{NaiveDate, Utc};
+use chrono::NaiveDate;
 use futures::future::{join_all, try_join_all};
 use serde::{Deserialize, Serialize};
 
@@ -32,7 +32,7 @@ impl ApiClient {
     pub async fn get_current_iterations(&self) -> anyhow::Result<Vec<Iteration>> {
         let response = self.get("iterations").await?;
         let iterations_slim = response.json::<Vec<IterationSlim>>().await?;
-        let today = Utc::now().date_naive();
+        let today = crate::time::today();
         let current_iteration_ids: Vec<_> = iterations_slim
             .iter()
             .filter(|it| it.start_date <= today && it.end_date >= today)

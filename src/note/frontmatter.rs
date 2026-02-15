@@ -1,4 +1,4 @@
-use chrono::{NaiveDate, Utc};
+use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use slugify::slugify;
 
@@ -48,7 +48,6 @@ impl Frontmatter {
         iteration_app_url: Option<String>,
     ) -> Self {
         let slug = slugify!(&story_name);
-        let now = Utc::now();
 
         Self {
             slug_id: slug,
@@ -61,7 +60,7 @@ impl Frontmatter {
 
             epic_link: None,
 
-            created: now.date_naive(),
+            created: crate::time::today(),
             note_type: NoteType::General,
             tags: Vec::new(),
             aliases: Vec::new(),

@@ -35,6 +35,7 @@ pub mod error;
 pub mod macros;
 pub mod note;
 pub mod text_utils;
+pub mod time;
 pub mod tmux;
 pub mod view;
 pub mod worktree;
