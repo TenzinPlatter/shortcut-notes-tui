@@ -113,6 +113,7 @@ pub fn key_to_msg(key: KeyEvent) -> Option<StoryListMsg> {
         navkey!(down) => Some(StoryListMsg::FocusNext),
         navkey!(up) => Some(StoryListMsg::FocusPrev),
         KeyCode::Char('o') => Some(StoryListMsg::OpenInBrowser),
+        KeyCode::Char('n') => Some(StoryListMsg::OpenNote),
         _ => None,
     }
 }
