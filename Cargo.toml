@@ -31,6 +31,7 @@ tempfile = "3.24.0"
 which = "8.0.0"
 throbber-widgets-tui = "0.10.0"
 tui-scrollview = "0.6"
+tui-widget-list = "0.15"
 open = "5.3.3"
 
 [profile.release]

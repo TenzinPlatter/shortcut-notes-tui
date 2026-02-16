@@ -4,11 +4,9 @@ use ratatui::{
     layout::Rect,
     style::Style,
     text::Line,
-    widgets::{
-        Block, BorderType, Clear, HighlightSpacing, List, ListItem, ListState, Padding,
-        StatefulWidget, Widget,
-    },
+    widgets::{Block, BorderType, Clear, Padding, StatefulWidget, Widget},
 };
+use tui_widget_list::{ListBuilder, ListView, ListState};
 
 use crate::{
     api::story::{Story, get_story_associated_iteration},
@@ -18,6 +16,7 @@ use crate::{
         msg::ActionMenuMsg,
     },
     navkey,
+    view::ActionItemWidget,
 };
 
 #[derive(Debug)]
@@ -63,25 +62,32 @@ impl StatefulWidget for ActionMenu {
     where
         Self: Sized,
     {
-        let items = ActionMenuItem::ALL.iter().map(|item| {
-            let line = Line::from(item.label()).centered();
-            ListItem::from(line)
-        });
-
         let block = Block::bordered()
             .border_type(BorderType::Rounded)
             .padding(Padding::vertical(2));
 
-        let list = List::new(items)
-            .block(block)
-            .highlight_spacing(HighlightSpacing::Always)
-            .highlight_style(Style::default().reversed());
+        let inner = block.inner(area);
+
+        let highlight_style = Style::default().reversed();
+
+        // Create the list builder
+        let builder = ListBuilder::new(move |context| {
+            let item = ActionMenuItem::ALL[context.index];
+            let widget = ActionItemWidget::new(item.label(), context.is_selected, highlight_style);
+            let height = widget.height();
+
+            (widget, height)
+        });
+
+        // Create the ListView
+        let list = ListView::new(builder, ActionMenuItem::ALL.len());
 
         let line_len = area.width - 2;
         let line = Line::from("-".repeat(line_len as usize));
 
         Clear.render(area, buf);
-        StatefulWidget::render(list, area, buf, state);
+        block.render(area, buf);
+        StatefulWidget::render(list, inner, buf, state);
 
         let top_line_area = Rect::new(area.x + 1, area.y + 1, area.width - 2, 1);
         let bottom_line_area = Rect::new(area.x + 1, area.y + area.height - 2, area.width - 2, 1);
@@ -141,7 +147,7 @@ pub fn update(
             if item_count == 0 {
                 return vec![Cmd::None];
             }
-            let current = state.selected().unwrap_or(0);
+            let current = state.selected.unwrap_or(0);
             let next = if current >= item_count - 1 {
                 0 // Wrap to start
             } else {
@@ -155,7 +161,7 @@ pub fn update(
             if item_count == 0 {
                 return vec![Cmd::None];
             }
-            let current = state.selected().unwrap_or(0);
+            let current = state.selected.unwrap_or(0);
             let prev = if current == 0 {
                 item_count - 1 // Wrap to end
             } else {
@@ -166,7 +172,7 @@ pub fn update(
         }
 
         ActionMenuMsg::Accept => {
-            let mut actions = match ActionMenuItem::from_idx(state.selected().unwrap_or(0)) {
+            let mut actions = match ActionMenuItem::from_idx(state.selected.unwrap_or(0)) {
                 ActionMenuItem::OpenNote => {
                     let iteration_app_url = data_state
                         .current_iterations_ref()

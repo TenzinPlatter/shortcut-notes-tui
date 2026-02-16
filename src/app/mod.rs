@@ -102,7 +102,7 @@ impl App {
 
         // Render main view based on active_view
         match self.model.ui.active_view {
-            ViewType::Iteration => {
+            ViewType::Stories => {
                 let story_list_view = StoryListView::new(
                     &self.model.data.stories,
                     &self.model.ui.story_list,

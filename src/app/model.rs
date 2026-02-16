@@ -35,7 +35,7 @@ impl LoadingState {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ViewType {
     #[default]
-    Iteration, // Current default: story list
+    Stories, // Current default: story list
     Epics,  // Future: browse all epics
     Notes,  // Future: browse notes directory
     Search, // Future: search across stories/notes
@@ -44,25 +44,25 @@ pub enum ViewType {
 impl ViewType {
     pub fn next(self) -> Self {
         match self {
-            ViewType::Iteration => ViewType::Epics,
+            ViewType::Stories => ViewType::Epics,
             ViewType::Epics => ViewType::Notes,
             ViewType::Notes => ViewType::Search,
-            ViewType::Search => ViewType::Iteration,
+            ViewType::Search => ViewType::Stories,
         }
     }
 
     pub fn prev(self) -> Self {
         match self {
-            ViewType::Iteration => ViewType::Search,
+            ViewType::Stories => ViewType::Search,
             ViewType::Search => ViewType::Notes,
             ViewType::Notes => ViewType::Epics,
-            ViewType::Epics => ViewType::Iteration,
+            ViewType::Epics => ViewType::Stories,
         }
     }
 
     pub fn label(&self) -> &'static str {
         match self {
-            ViewType::Iteration => "Iteration",
+            ViewType::Stories => "Stories",
             ViewType::Epics => "Epics",
             ViewType::Notes => "Notes",
             ViewType::Search => "Search",

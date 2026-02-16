@@ -3,14 +3,16 @@ use ratatui::{
     layout::{Alignment, Rect},
     style::Style,
     symbols::border,
-    text::Line,
     widgets::{Block, Paragraph, StatefulWidget, Widget, WidgetRef},
 };
+use tui_widget_list::{ListBuilder, ListView, ListState};
 
-use crate::{api::story::Story, app::model::{LoadingState, StoryListState}};
+use crate::{
+    api::story::Story,
+    app::model::{LoadingState, StoryListState},
+};
 
-use super::list::{CustomList, ListState};
-use super::story_row::StoryRow;
+use super::story_item_builder::StoryItemWidget;
 
 const SPINNER_CHARS: &[char] = &['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
 
@@ -54,13 +56,11 @@ impl<'a> WidgetRef for StoryListView<'a> {
         let inner = block.inner(area);
         block.render(area, buf);
 
-        // Handle loading and empty states when no stories to display
+        // Handle loading and empty states
         if self.stories.is_empty() {
             let message = if self.loading.is_loading() {
-                // Show centered spinner + message
                 format!("{} {}", self.spinner_char(), self.loading.label())
             } else {
-                // Loaded but no stories
                 "No stories assigned in this iteration.".to_string()
             };
 
@@ -69,7 +69,6 @@ impl<'a> WidgetRef for StoryListView<'a> {
                 .style(style)
                 .alignment(Alignment::Center);
 
-            // Center vertically
             if inner.height > 0 {
                 let centered_area = Rect::new(
                     inner.x,
@@ -82,23 +81,6 @@ impl<'a> WidgetRef for StoryListView<'a> {
             return;
         }
 
-        // Convert stories to StoryRow instances
-        let story_rows: Vec<_> = self
-            .stories
-            .iter()
-            .map(|story| {
-                let is_active = match self.active_story {
-                    Some(active_story) => active_story.id == story.id,
-                    None => false,
-                };
-
-                StoryRow::new(story, is_active)
-            })
-            .collect();
-
-        // Create horizontal divider line (repeated "─" character)
-        let divider = Line::from("─".repeat(inner.width as usize));
-
         // Determine highlight style based on focus
         let highlight_style = if self.is_focused {
             Style::default().blue().bold()
@@ -106,14 +88,34 @@ impl<'a> WidgetRef for StoryListView<'a> {
             Style::default()
         };
 
-        // Create and render the CustomList
-        let custom_list = CustomList::new(&story_rows)
-            .divider(divider)
-            .highlight_style(highlight_style);
+        // Create the list builder
+        let stories = self.stories;
+        let active_story = self.active_story;
+        let width = inner.width;
 
+        let builder = ListBuilder::new(move |context| {
+            let story = &stories[context.index];
+            let is_active = match active_story {
+                Some(active) => active.id == story.id,
+                None => false,
+            };
+
+            let widget = StoryItemWidget::new(story, is_active, context.is_selected, highlight_style, width);
+            let height = widget.height();
+
+            (widget, height)
+        });
+
+        // Create the ListView
+        let list = ListView::new(builder, self.stories.len());
+
+        // Create mutable state from our StoryListState
         let mut list_state = ListState::default();
-        list_state.select(self.state.selected_index(self.stories));
+        if let Some(selected) = self.state.selected_index(self.stories) {
+            list_state.select(Some(selected));
+        }
 
-        custom_list.render(inner, buf, &mut list_state);
+        // Render the list
+        StatefulWidget::render(list, inner, buf, &mut list_state);
     }
 }

@@ -39,7 +39,7 @@ impl WidgetRef for NavBar {
         block.render(area, buf);
 
         let all_views = [
-            ViewType::Iteration,
+            ViewType::Stories,
             ViewType::Epics,
             ViewType::Notes,
             ViewType::Search,
