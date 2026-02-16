@@ -255,9 +255,15 @@ pub fn key_to_msg(key: KeyEvent) -> Option<StoryListMsg> {
     match key.code {
         navkey!(down) => Some(StoryListMsg::FocusNext),
         navkey!(up) => Some(StoryListMsg::FocusPrev),
+        KeyCode::Char('f') => Some(StoryListMsg::ToggleFinished),
+
+        // story specific shortcuts
         KeyCode::Char('o') => Some(StoryListMsg::OpenInBrowser),
         KeyCode::Char('n') => Some(StoryListMsg::OpenNote),
-        KeyCode::Char('f') => Some(StoryListMsg::ToggleFinished),
+        KeyCode::Char('a') => Some(StoryListMsg::SelectStory),
+        KeyCode::Char('e') => Some(StoryListMsg::EditStoryContents),
+        KeyCode::Char('t') => Some(StoryListMsg::TmuxEnter),
+
         _ => None,
     }
 }
