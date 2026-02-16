@@ -8,7 +8,7 @@ use ratatui::{
     text::Line,
     widgets::{Block, Paragraph, StatefulWidget, Widget, WidgetRef},
 };
-use tui_widget_list::{ListBuilder, ListView, ListState};
+use tui_widget_list::{ListBuilder, ListState, ListView};
 
 use crate::{
     api::{iteration::Iteration, story::Story},
@@ -121,12 +121,7 @@ impl<'a> WidgetRef for StoryListView<'a> {
                 .alignment(Alignment::Center);
 
             if inner.height > 0 {
-                let centered_area = Rect::new(
-                    inner.x,
-                    inner.y + inner.height / 2,
-                    inner.width,
-                    1,
-                );
+                let centered_area = Rect::new(inner.x, inner.y + inner.height / 2, inner.width, 1);
                 paragraph.render(centered_area, buf);
             }
             return;
@@ -192,7 +187,12 @@ impl<'a> WidgetRef for StoryListView<'a> {
             if header_area.height > 1 {
                 let divider = "═".repeat(header_area.width as usize);
                 let divider_line = Line::from(divider).style(header_style);
-                buf.set_line(header_area.x, header_area.y + 1, &divider_line, header_area.width);
+                buf.set_line(
+                    header_area.x,
+                    header_area.y + 1,
+                    &divider_line,
+                    header_area.width,
+                );
             }
 
             // Render stories list
@@ -200,7 +200,7 @@ impl<'a> WidgetRef for StoryListView<'a> {
             area_index += 1;
 
             // Build a list of stories for this section
-            let section_stories: Vec<_> = section.stories.iter().copied().collect();
+            let section_stories: Vec<_> = section.stories.to_vec();
             let active_story = self.active_story;
             let width = stories_area.width;
 
@@ -211,7 +211,13 @@ impl<'a> WidgetRef for StoryListView<'a> {
                     None => false,
                 };
 
-                let widget = StoryItemWidget::new(story, is_active, context.is_selected, highlight_style, width);
+                let widget = StoryItemWidget::new(
+                    story,
+                    is_active,
+                    context.is_selected,
+                    highlight_style,
+                    width,
+                );
                 let height = widget.height();
 
                 (widget, height)
@@ -221,10 +227,10 @@ impl<'a> WidgetRef for StoryListView<'a> {
 
             // Find if any story in this section is selected
             let mut list_state = ListState::default();
-            if let Some(selected_id) = self.state.selected_story_id {
-                if let Some(pos) = section.stories.iter().position(|s| s.id == selected_id) {
-                    list_state.select(Some(pos));
-                }
+            if let Some(selected_id) = self.state.selected_story_id
+                && let Some(pos) = section.stories.iter().position(|s| s.id == selected_id)
+            {
+                list_state.select(Some(pos));
             }
 
             StatefulWidget::render(list, stories_area, buf, &mut list_state);

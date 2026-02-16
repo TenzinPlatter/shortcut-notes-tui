@@ -35,7 +35,7 @@ fn group_stories_by_iteration<'a>(
 
     // If we have iterations, sort them by start_date and create sections
     if let Some(iterations) = iterations {
-        let mut sorted_iterations: Vec<_> = iterations.iter().copied().collect();
+        let mut sorted_iterations: Vec<_> = iterations.to_vec();
         sorted_iterations.sort_by_key(|it| it.start_date);
 
         for iteration in sorted_iterations {
@@ -154,10 +154,8 @@ pub fn update(
                 state.selected_story_id = prev_story_id(current_id, &sections);
             } else {
                 // No story selected, select last story in last section
-                state.selected_story_id = sections
-                    .last()
-                    .and_then(|s| s.stories.last())
-                    .map(|s| s.id);
+                state.selected_story_id =
+                    sections.last().and_then(|s| s.stories.last()).map(|s| s.id);
             }
 
             vec![Cmd::None]
@@ -166,7 +164,9 @@ pub fn update(
         StoryListMsg::OpenNote => {
             if let Some(story) = get_hovered_story(state, stories) {
                 let iteration_app_url = current_iterations
-                    .and_then(|iterations| get_story_associated_iteration(story.iteration_id, iterations))
+                    .and_then(|iterations| {
+                        get_story_associated_iteration(story.iteration_id, iterations)
+                    })
                     .map(|it| it.app_url.clone());
 
                 return vec![Cmd::OpenNote {
@@ -208,7 +208,9 @@ pub fn update(
 
         StoryListMsg::OpenInBrowser => {
             if let Some(story) = get_hovered_story(state, stories) {
-                vec![Cmd::OpenInBrowser { app_url: story.app_url.clone() }]
+                vec![Cmd::OpenInBrowser {
+                    app_url: story.app_url.clone(),
+                }]
             } else {
                 vec![Cmd::None]
             }
