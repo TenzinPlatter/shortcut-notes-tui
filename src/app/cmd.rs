@@ -176,10 +176,11 @@ pub async fn execute(
             terminal.clear()?;
 
             let contents = read_to_string(tmp_path)?;
-            api_client
-                .update_story_description(story_id, contents)
-                .await?;
-
+            if contents != description {
+                api_client
+                    .update_story_description(story_id, contents)
+                    .await?;
+            }
             Ok(())
         }
 
