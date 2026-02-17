@@ -6,7 +6,7 @@ use tokio::sync::mpsc;
 
 use crate::app::pane::action_menu::ActionMenu;
 use crate::error::ERROR_NOTIFICATION_MAX_HEIGHT;
-use crate::view::description_modal::{centered_rect, DescriptionModal};
+use crate::view::description_modal::{DescriptionModal, centered_rect};
 use crate::view::{navbar::NavBar, story_list::StoryListView};
 use crate::{api::ApiClient, app::model::ViewType, config::Config};
 
@@ -98,7 +98,8 @@ impl App {
             has_stories,
             tick,
         );
-        frame.render_widget_ref(navbar, chunks[0]);
+
+        navbar.render_ref(chunks[0], frame.buffer_mut());
 
         // Render main view based on active_view
         match self.model.ui.active_view {
@@ -113,7 +114,13 @@ impl App {
                     tick,
                 );
 
-                frame.render_widget_ref(story_list_view, chunks[1]);
+                story_list_view.render_ref(chunks[1], frame.buffer_mut());
+            }
+
+            ViewType::Iterations => {
+                // let iteration_view = IterationListView::new();
+                let placeholder = Paragraph::new("Coming soon...").block(Block::bordered());
+                frame.render_widget(placeholder, chunks[1]);
             }
 
             ViewType::Epics | ViewType::Notes | ViewType::Search => {

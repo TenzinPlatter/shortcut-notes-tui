@@ -36,15 +36,26 @@ impl LoadingState {
 pub enum ViewType {
     #[default]
     Stories, // Current default: story list
-    Epics,  // Future: browse all epics
-    Notes,  // Future: browse notes directory
-    Search, // Future: search across stories/notes
+    Epics,      // Future: browse all epics
+    Notes,      // Future: browse notes directory
+    Search,     // Future: search across stories/notes
+    Iterations, // browse iterations
 }
 
 impl ViewType {
+    // NOTE: keep the ordering of the below three items consistent with eachother
+    pub const ALL: &[Self] = &[
+        ViewType::Stories,
+        ViewType::Iterations,
+        ViewType::Epics,
+        ViewType::Notes,
+        ViewType::Search,
+    ];
+
     pub fn next(self) -> Self {
         match self {
-            ViewType::Stories => ViewType::Epics,
+            ViewType::Stories => ViewType::Iterations,
+            ViewType::Iterations => ViewType::Epics,
             ViewType::Epics => ViewType::Notes,
             ViewType::Notes => ViewType::Search,
             ViewType::Search => ViewType::Stories,
@@ -56,7 +67,8 @@ impl ViewType {
             ViewType::Stories => ViewType::Search,
             ViewType::Search => ViewType::Notes,
             ViewType::Notes => ViewType::Epics,
-            ViewType::Epics => ViewType::Stories,
+            ViewType::Epics => ViewType::Iterations,
+            ViewType::Iterations => ViewType::Stories,
         }
     }
 
@@ -66,6 +78,7 @@ impl ViewType {
             ViewType::Epics => "Epics",
             ViewType::Notes => "Notes",
             ViewType::Search => "Search",
+            ViewType::Iterations => "Iterations",
         }
     }
 }
@@ -81,6 +94,7 @@ pub struct Model {
 #[derive(Default, Debug)]
 pub struct DataState {
     pub stories: Vec<Story>,
+    pub iterations: Vec<Iteration>,
     pub epics: Vec<Epic>,
     pub current_iterations: Option<Vec<Iteration>>,
     pub active_story: Option<Story>,
@@ -143,6 +157,7 @@ impl Model {
                 current_iterations: cache.current_iterations.clone(),
                 active_story: cache.active_story.clone(),
                 async_handles: Vec::new(),
+                iterations: cache.iterations.clone(),
             },
             ui: UiState::default(),
             config,

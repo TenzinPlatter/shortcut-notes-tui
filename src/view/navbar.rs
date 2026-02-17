@@ -38,16 +38,9 @@ impl WidgetRef for NavBar {
         let inner = block.inner(area);
         block.render(area, buf);
 
-        let all_views = [
-            ViewType::Stories,
-            ViewType::Epics,
-            ViewType::Notes,
-            ViewType::Search,
-        ];
-
         let mut spans = Vec::new();
 
-        for (i, view_type) in all_views.iter().enumerate() {
+        for (i, view_type) in ViewType::ALL.iter().enumerate() {
             if i > 0 {
                 spans.push(Span::raw(" │ "));
             }

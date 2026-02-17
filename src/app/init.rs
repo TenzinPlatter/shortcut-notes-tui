@@ -1,5 +1,5 @@
 use anyhow::Result;
-use tokio::sync::mpsc;
+use tokio::{sync::mpsc::{self, UnboundedSender}, task::JoinHandle};
 use uuid::Uuid;
 
 use crate::{
@@ -37,24 +37,9 @@ impl App {
         let sender_clone = sender.clone();
 
         let mut model = Model::from_cache_and_config(cache, config.clone());
-        let api_client_clone = api_client.clone();
-        let init_handle = tokio::spawn(async move {
-            match api_client_clone.get_current_iterations().await {
-                Ok(iterations) => {
-                    let _ = sender.send(Msg::IterationsLoaded(iterations));
-                }
-                Err(e) => {
-                    let info = ErrorInfo::new(
-                        "Failed to fetch current iteration info".to_string(),
-                        e.to_string(),
-                    );
 
-                    let _ = sender.send(Msg::Error(info));
-                }
-            };
-        });
-
-        model.data.async_handles.push(init_handle);
+        let handles = fetch_info_from_api(api_client.clone(), sender).await;
+        model.data.async_handles.extend(handles);
 
         Ok(App {
             model,
@@ -85,6 +70,7 @@ impl App {
                 current_iterations: Some(vec![iteration.clone()]),
                 active_story: None,
                 async_handles: Vec::new(),
+                iterations: vec![iteration.clone()],
             },
             ui: UiState::default(),
             config: config.clone(),
@@ -108,3 +94,24 @@ impl App {
         })
     }
 }
+
+async fn fetch_info_from_api(api_client: ApiClient, sender: UnboundedSender<Msg>) -> Vec<JoinHandle<()>> {
+    let current_iteration_handle = tokio::spawn(async move {
+        match api_client.get_current_iterations().await {
+            Ok(iterations) => {
+                let _ = sender.send(Msg::IterationsLoaded(iterations));
+            }
+            Err(e) => {
+                let info = ErrorInfo::new(
+                    "Failed to fetch current iteration info".to_string(),
+                    e.to_string(),
+                );
+
+                let _ = sender.send(Msg::Error(info));
+            }
+        };
+    });
+
+    vec![current_iteration_handle]
+}
+

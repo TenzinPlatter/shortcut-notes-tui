@@ -16,6 +16,7 @@ use crate::{
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct Cache {
     pub current_iterations: Option<Vec<Iteration>>,
+    pub iterations: Vec<Iteration>,
     pub iteration_stories: Option<Vec<Story>>,
     pub active_story: Option<Story>,
     pub user_id: Option<Uuid>,
@@ -25,10 +26,11 @@ pub struct Cache {
 impl Default for Cache {
     fn default() -> Self {
         Self {
-            current_iterations: Default::default(),
-            iteration_stories: Default::default(),
-            user_id: Default::default(),
-            active_story: Default::default(),
+            current_iterations: None,
+            iteration_stories: None,
+            iterations: Vec::new(),
+            user_id: None,
+            active_story: None,
             cache_dir: Self::default_cache_dir(),
         }
     }
