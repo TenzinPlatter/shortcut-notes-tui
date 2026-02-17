@@ -28,6 +28,7 @@ pub async fn get_repo_list(config: &Config) -> anyhow::Result<String> {
         .args([
             "-t",
             "d",
+            "-I",
             "-H",
             "^\\.git$",
             config.repositories_directory.to_str().unwrap(),
