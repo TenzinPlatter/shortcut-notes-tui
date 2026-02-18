@@ -8,6 +8,7 @@ use crate::error::ErrorInfo;
 pub enum Msg {
     KeyPressed(KeyEvent),
     StoryList(StoryListMsg),
+    NotesList(NotesListMsg),
     ActionMenu(ActionMenuMsg),
     DescriptionModal(DescriptionModalMsg),
     StoriesLoaded {
@@ -42,6 +43,13 @@ pub enum ActionMenuMsg {
     FocusPrev,
     Accept,
     Close,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum NotesListMsg {
+    FocusNext,
+    FocusPrev,
+    OpenNote,
 }
 
 #[derive(Debug, Clone)]

@@ -15,7 +15,7 @@ use tokio::sync::mpsc;
 use crate::app::pane::action_menu::ActionMenu;
 use crate::error::{ERROR_NOTIFICATION_MAX_HEIGHT, ErrorInfo};
 use crate::view::description_modal::{DescriptionModal, centered_rect};
-use crate::view::{navbar::NavBar, story_list::StoryListView};
+use crate::view::{navbar::NavBar, notes_list::NotesListView, story_list::StoryListView};
 use crate::worktree::{create_worktree, get_repo_list, select_repo_with_fzf};
 use crate::{api::ApiClient, app::model::ViewType, config::Config};
 
@@ -153,7 +153,7 @@ impl App {
 
             cmd::Cmd::OpenDailyNote { path } => {
                 with_suspended_tui(terminal, || {
-                    cmd::open_in_editor(&self.model.config, &path)
+                    cmd::open_daily_note_with_frontmatter(&self.model.config, &path)
                 })?;
                 self.sender.send(msg::Msg::NoteOpened).ok();
             }
@@ -237,7 +237,12 @@ impl App {
                 frame.render_widget(placeholder, chunks[1]);
             }
 
-            ViewType::Epics | ViewType::Notes | ViewType::Search => {
+            ViewType::Notes => {
+                let notes_view = NotesListView::new(&self.model.ui.notes_list);
+                notes_view.render_ref(chunks[1], frame.buffer_mut());
+            }
+
+            ViewType::Epics | ViewType::Search => {
                 // Placeholder for future views
                 let placeholder = Paragraph::new("Coming soon...").block(Block::bordered());
                 frame.render_widget(placeholder, chunks[1]);

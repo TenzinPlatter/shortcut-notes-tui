@@ -2,6 +2,8 @@ use throbber_widgets_tui::ThrobberState;
 use tokio::task::JoinHandle;
 use tui_scrollview::ScrollViewState;
 
+use std::path::PathBuf;
+
 use crate::{
     api::{epic::Epic, iteration::Iteration, story::Story},
     app::pane::action_menu::ActionMenuState,
@@ -47,17 +49,17 @@ impl ViewType {
     pub const ALL: &[Self] = &[
         ViewType::Stories,
         ViewType::Iterations,
-        ViewType::Epics,
         ViewType::Notes,
+        ViewType::Epics,
         ViewType::Search,
     ];
 
     pub fn next(self) -> Self {
         match self {
             ViewType::Stories => ViewType::Iterations,
-            ViewType::Iterations => ViewType::Epics,
-            ViewType::Epics => ViewType::Notes,
-            ViewType::Notes => ViewType::Search,
+            ViewType::Iterations => ViewType::Notes,
+            ViewType::Notes => ViewType::Epics,
+            ViewType::Epics => ViewType::Search,
             ViewType::Search => ViewType::Stories,
         }
     }
@@ -65,9 +67,9 @@ impl ViewType {
     pub fn prev(self) -> Self {
         match self {
             ViewType::Stories => ViewType::Search,
-            ViewType::Search => ViewType::Notes,
-            ViewType::Notes => ViewType::Epics,
-            ViewType::Epics => ViewType::Iterations,
+            ViewType::Search => ViewType::Epics,
+            ViewType::Epics => ViewType::Notes,
+            ViewType::Notes => ViewType::Iterations,
             ViewType::Iterations => ViewType::Stories,
         }
     }
@@ -112,6 +114,7 @@ pub struct DescriptionModalState {
 pub struct UiState {
     pub active_view: ViewType,
     pub story_list: StoryListState,
+    pub notes_list: NotesListState,
     pub action_menu: ActionMenuState,
     pub description_modal: DescriptionModalState,
     pub errors: Vec<ErrorInfo>,
@@ -132,6 +135,13 @@ impl Default for StoryListState {
             show_finished: true,
         }
     }
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct NotesListState {
+    pub selected_path: Option<PathBuf>,
+    pub daily_notes: Vec<PathBuf>,
+    pub other_notes: Vec<PathBuf>,
 }
 
 impl StoryListState {

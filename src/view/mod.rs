@@ -1,6 +1,7 @@
 pub mod action_item_builder;
 pub mod description_modal;
 pub mod navbar;
+pub mod notes_list;
 pub mod story_item_builder;
 pub mod story_list;
 pub mod iteration_list;

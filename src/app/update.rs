@@ -6,9 +6,9 @@ use crate::{
     app::{
         App,
         cmd::Cmd,
-        model::LoadingState,
+        model::{LoadingState, ViewType},
         msg::Msg,
-        pane::{action_menu, description_modal, story_list},
+        pane::{action_menu, description_modal, notes_list, story_list},
     },
     dbg_file,
     error::ErrorInfo,
@@ -39,6 +39,11 @@ impl App {
                 &self.model.data.stories,
                 self.model.data.current_iterations_ref(),
                 story_msg,
+            ),
+
+            Msg::NotesList(notes_msg) => notes_list::update(
+                &mut self.model.ui.notes_list,
+                notes_msg,
             ),
 
             Msg::StoriesLoaded {
@@ -156,10 +161,25 @@ impl App {
 
             Msg::SwitchToView(view_type) => {
                 self.model.ui.active_view = view_type;
+                if view_type == ViewType::Notes {
+                    let (daily, other) = notes_list::scan_notes(&self.model.config.notes_dir);
+                    self.model.ui.notes_list.daily_notes = daily;
+                    self.model.ui.notes_list.other_notes = other;
+                    if self.model.ui.notes_list.selected_path.is_none() {
+                        self.model.ui.notes_list.selected_path =
+                            self.model.ui.notes_list.daily_notes.first().cloned()
+                                .or_else(|| self.model.ui.notes_list.other_notes.first().cloned());
+                    }
+                }
                 vec![Cmd::None]
             }
 
             Msg::NoteOpened => {
+                if self.model.ui.active_view == ViewType::Notes {
+                    let (daily, other) = notes_list::scan_notes(&self.model.config.notes_dir);
+                    self.model.ui.notes_list.daily_notes = daily;
+                    self.model.ui.notes_list.other_notes = other;
+                }
                 vec![Cmd::None]
             }
 
@@ -231,17 +251,15 @@ impl App {
 
         match key.code {
             // View switching (Tab/Shift+Tab)
-            KeyCode::Tab => {
+            KeyCode::Tab | KeyCode::Char('L') => {
                 let next_view = self.model.ui.active_view.next();
                 return self.update(Msg::SwitchToView(next_view));
             }
 
-            KeyCode::BackTab => {
+            KeyCode::BackTab | KeyCode::Char('H') => {
                 let prev_view = self.model.ui.active_view.prev();
                 return self.update(Msg::SwitchToView(prev_view));
             }
-
-            KeyCode::Enter => return self.update(Msg::ToggleActionMenu),
 
             KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 let today = crate::time::today();
@@ -253,26 +271,40 @@ impl App {
                 return vec![Cmd::OpenDailyNote { path }];
             }
 
-            KeyCode::Char('d') => {
-                let story = self
-                    .model
-                    .ui
-                    .story_list
-                    .selected_story_id
-                    .and_then(|id| self.model.data.stories.iter().find(|s| s.id == id));
-
-                if let Some(story) = story {
-                    description_modal::open(&mut self.model.ui.description_modal, story.clone());
-                }
-                return vec![Cmd::None];
-            }
-
             _ => {}
         }
 
         // Route to active view's key handler
-        if let Some(msg) = story_list::key_to_msg(key) {
-            return self.update(Msg::StoryList(msg));
+        match self.model.ui.active_view {
+            ViewType::Stories => {
+                match key.code {
+                    KeyCode::Enter => return self.update(Msg::ToggleActionMenu),
+                    KeyCode::Char('d') => {
+                        let story = self
+                            .model
+                            .ui
+                            .story_list
+                            .selected_story_id
+                            .and_then(|id| self.model.data.stories.iter().find(|s| s.id == id));
+
+                        if let Some(story) = story {
+                            description_modal::open(&mut self.model.ui.description_modal, story.clone());
+                        }
+                        return vec![Cmd::None];
+                    }
+                    _ => {}
+                }
+
+                if let Some(msg) = story_list::key_to_msg(key) {
+                    return self.update(Msg::StoryList(msg));
+                }
+            }
+            ViewType::Notes => {
+                if let Some(msg) = notes_list::key_to_msg(key) {
+                    return self.update(Msg::NotesList(msg));
+                }
+            }
+            _ => {}
         }
 
         vec![Cmd::None]

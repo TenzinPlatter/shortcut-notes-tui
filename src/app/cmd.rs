@@ -248,6 +248,39 @@ pub fn open_iteration_note_in_editor(
     Ok(())
 }
 
+pub fn open_daily_note_with_frontmatter(config: &Config, path: &Path) -> anyhow::Result<()> {
+    if path.is_dir() {
+        anyhow::bail!("Note path: {} is not a file", path.display());
+    }
+
+    if let Some(p) = path.parent() {
+        create_dir_all(p)?;
+    }
+
+    // Write frontmatter if file is new or empty
+    let needs_frontmatter = if path.is_file() {
+        read_to_string(path)?.is_empty()
+    } else {
+        true
+    };
+
+    if needs_frontmatter {
+        let today = crate::time::today();
+        let frontmatter = format!("---\ncreated: {}\ntype: daily\n---\n", today);
+        let mut f = File::create(path)?;
+        f.write_all(frontmatter.as_bytes())?;
+    }
+
+    dbg_file!("Opening daily note in editor: {}", path.display());
+
+    let res = Command::new(&config.editor).arg(path).status()?;
+    if !res.success() {
+        anyhow::bail!("Failed to open {} in editor", path.display());
+    }
+
+    Ok(())
+}
+
 pub async fn open_tmux_session(name: &str) -> anyhow::Result<()> {
     if !session_exists(name).await? {
         session_create(name).await?;
