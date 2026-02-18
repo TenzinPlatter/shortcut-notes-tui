@@ -15,7 +15,7 @@ use tokio::sync::mpsc::UnboundedSender;
 
 use crate::app::model::Model;
 use crate::error::ErrorInfo;
-use crate::tmux::{session_attach, session_create};
+use crate::tmux::{session_attach, session_create, session_exists};
 use crate::worktree::{create_worktree, get_repo_list, select_repo_with_fzf};
 use crate::{
     api::{ApiClient, story::Story},
@@ -373,7 +373,9 @@ fn open_iteration_note_in_editor_tui(
 }
 
 pub async fn open_tmux_session(name: &str) -> anyhow::Result<()> {
-    session_create(name).await?;
+    if !session_exists(name).await? {
+        session_create(name).await?;
+    }
     session_attach(name).await?;
     Ok(())
 }
