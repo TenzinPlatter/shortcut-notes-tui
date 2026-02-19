@@ -21,4 +21,7 @@ pub enum Commands {
 
     #[command(alias = "o")]
     Open,
+
+    #[command()]
+    Cat,
 }

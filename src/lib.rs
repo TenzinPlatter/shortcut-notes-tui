@@ -1,4 +1,4 @@
-use std::fs;
+use std::{fmt::format, fs, process::Command};
 
 use anyhow::Context;
 use ratatui::DefaultTerminal;
@@ -16,16 +16,17 @@ use crate::{
     cache::Cache,
     cli::Commands,
     config::Config,
+    note::Note,
 };
 
 pub mod api;
 pub mod app;
-pub mod keybindings;
 pub mod cache;
 pub mod cli;
 pub mod config;
 pub mod dummy;
 pub mod error;
+pub mod keybindings;
 pub mod macros;
 pub mod note;
 pub mod text_utils;
@@ -113,6 +114,36 @@ pub async fn handle_command(
                 no_active_story!();
             }
         }
+
+        Commands::Cat => {
+            if let Some(story) = &cache.active_story {
+                let iteration_app_url = cache
+                    .current_iterations_ref()
+                    .and_then(|iterations| {
+                        get_story_associated_iteration(story.iteration_id, iterations)
+                    })
+                    .map(|it| it.app_url.clone());
+
+                let note = Note::new(
+                    &config.notes_dir,
+                    story.id,
+                    story.name.clone(),
+                    story.app_url.clone(),
+                    iteration_app_url,
+                );
+
+                let status = Command::new("cat")
+                    .arg(note.path)
+                    .status()?;
+
+                if !status.success() {
+                    anyhow::bail!("Failed to cat not for story {}", &story.name);
+                }
+
+                Ok(())
+            } else {
+                no_active_story!();
+            }
+        }
     }
 }
-
