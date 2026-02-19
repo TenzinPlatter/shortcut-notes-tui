@@ -222,6 +222,11 @@ impl App {
                 )]
             }
 
+            Msg::ToggleKeybindsPanel => {
+                self.model.ui.show_keybinds_panel = !self.model.ui.show_keybinds_panel;
+                vec![Cmd::None]
+            }
+
             Msg::DescriptionModal(modal_msg) => {
                 description_modal::update(&mut self.model.ui.description_modal, modal_msg)
             }
@@ -229,6 +234,14 @@ impl App {
     }
 
     fn handle_key_input(&mut self, key: KeyEvent) -> Vec<Cmd> {
+        // Keybinds panel takes highest priority
+        if self.model.ui.show_keybinds_panel {
+            if matches!(key.code, KeyCode::Char('?') | KeyCode::Char('q') | KeyCode::Esc) {
+                self.model.ui.show_keybinds_panel = false;
+            }
+            return vec![Cmd::None];
+        }
+
         // Description modal takes priority (rendered on top of everything)
         if self.model.ui.description_modal.is_showing {
             return if let Some(msg) = description_modal::key_to_msg(key) {
@@ -253,6 +266,7 @@ impl App {
         if let Some(app_key) = app_key {
             match app_key {
                 Key::Quit => return self.update(Msg::Quit),
+                Key::HelpPanel => return self.update(Msg::ToggleKeybindsPanel),
                 Key::ViewNext => {
                     let next = self.model.ui.active_view.next();
                     return self.update(Msg::SwitchToView(next));

@@ -20,6 +20,7 @@ pub enum Msg {
     SwitchToView(ViewType),
     NoteOpened,
     ToggleActionMenu,
+    ToggleKeybindsPanel,
     CacheWritten,
     Error(ErrorInfo),
     Quit,

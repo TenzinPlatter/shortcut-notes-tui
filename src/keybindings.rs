@@ -9,6 +9,7 @@ pub enum Key {
     FocusPrev,
     // Global
     Quit,
+    HelpPanel,
     ViewNext,
     ViewPrev,
     DailyNote,
@@ -31,6 +32,7 @@ impl Key {
             KeyCode::Tab | KeyCode::Char('L') => Some(Key::ViewNext),
             KeyCode::BackTab | KeyCode::Char('H') => Some(Key::ViewPrev),
             KeyCode::Char('q') => Some(Key::Quit),
+            KeyCode::Char('?') => Some(Key::HelpPanel),
             KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Key::Quit),
             KeyCode::Char('d') => Some(Key::DailyNote),
             KeyCode::Char(' ') => Some(Key::Description),
@@ -50,6 +52,7 @@ impl Key {
             Key::FocusNext => "Focus next story",
             Key::FocusPrev => "Focus previous story",
             Key::Quit => "Quit",
+            Key::HelpPanel => "Toggle keybinds help",
             Key::ViewNext => "Next view",
             Key::ViewPrev => "Previous view",
             Key::DailyNote => "Open daily note",

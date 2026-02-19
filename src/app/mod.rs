@@ -15,6 +15,7 @@ use tokio::sync::mpsc;
 use crate::app::pane::action_menu::ActionMenu;
 use crate::error::{ERROR_NOTIFICATION_MAX_HEIGHT, ErrorInfo};
 use crate::view::description_modal::{DescriptionModal, centered_rect};
+use crate::view::keybinds_panel::KeybindsPanel;
 use crate::view::{navbar::NavBar, notes_list::NotesListView, story_list::StoryListView};
 use crate::worktree::{create_worktree, get_repo_list, select_repo_with_fzf};
 use crate::{api::ApiClient, app::model::ViewType, config::Config};
@@ -262,14 +263,19 @@ impl App {
             && let Some(story) = &self.model.ui.description_modal.story
         {
             let area = centered_rect(80, 80, frame.area());
-            frame.render_widget(Clear, area);
+            Clear.render(area, frame.buffer_mut());
 
             let modal = DescriptionModal::new(story);
-            frame.render_stateful_widget(
-                modal,
+            modal.render(
                 area,
+                frame.buffer_mut(),
                 &mut self.model.ui.description_modal.scroll_view_state,
             );
+        }
+
+        // Render keybinds panel (above description modal, below errors)
+        if self.model.ui.show_keybinds_panel {
+            KeybindsPanel.render(frame.area(), frame.buffer_mut());
         }
 
         self.draw_error(frame);
@@ -291,7 +297,7 @@ impl App {
             used_height += height;
 
             // clear terminal area, stops characters behind empty space from being visible
-            frame.render_widget(Clear, area);
+            Clear.render(area, frame.buffer_mut());
 
             error.render_ref(area, frame.buffer_mut());
         }

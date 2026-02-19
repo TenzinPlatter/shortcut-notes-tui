@@ -117,6 +117,7 @@ pub struct UiState {
     pub notes_list: NotesListState,
     pub action_menu: ActionMenuState,
     pub description_modal: DescriptionModalState,
+    pub show_keybinds_panel: bool,
     pub errors: Vec<ErrorInfo>,
     pub loading: LoadingState,
     pub throbber_state: ThrobberState,

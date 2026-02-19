@@ -1,4 +1,5 @@
 pub mod action_item_builder;
+pub mod keybinds_panel;
 pub mod description_modal;
 pub mod navbar;
 pub mod notes_list;
