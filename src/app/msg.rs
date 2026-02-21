@@ -1,6 +1,6 @@
 use crossterm::event::KeyEvent;
 
-use crate::api::{epic::Epic, iteration::Iteration, story::Story};
+use crate::api::{epic::EpicSlim, iteration::Iteration, story::Story};
 use crate::app::model::ViewType;
 use crate::error::ErrorInfo;
 
@@ -9,14 +9,17 @@ pub enum Msg {
     KeyPressed(KeyEvent),
     StoryList(StoryListMsg),
     NotesList(NotesListMsg),
+    IterationList(IterationListMsg),
+    EpicList(EpicListMsg),
     ActionMenu(ActionMenuMsg),
     DescriptionModal(DescriptionModalMsg),
     StoriesLoaded {
         stories: Vec<Story>,
         from_cache: bool,
     },
-    EpicsLoaded(Vec<Epic>),
+    EpicsLoaded(Vec<EpicSlim>),
     IterationsLoaded(Vec<Iteration>),
+    AllIterationsLoaded(Vec<Iteration>),
     SwitchToView(ViewType),
     NoteOpened,
     ToggleActionMenu,
@@ -51,6 +54,30 @@ pub enum NotesListMsg {
     FocusNext,
     FocusPrev,
     OpenNote,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum IterationListMsg {
+    FocusNext,
+    FocusPrev,
+    OpenNote,
+    ActivateSearch,
+    DeactivateSearch,
+    SearchInput(char),
+    SearchBackspace,
+    ClearSearch,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum EpicListMsg {
+    FocusNext,
+    FocusPrev,
+    OpenNote,
+    ActivateSearch,
+    DeactivateSearch,
+    SearchInput(char),
+    SearchBackspace,
+    ClearSearch,
 }
 
 #[derive(Debug, Clone)]

@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
-    api::{iteration::Iteration, story::Story},
+    api::{epic::EpicSlim, iteration::Iteration, story::Story},
     dbg_file,
 };
 
@@ -18,6 +18,7 @@ pub struct Cache {
     pub current_iterations: Option<Vec<Iteration>>,
     pub iterations: Vec<Iteration>,
     pub iteration_stories: Option<Vec<Story>>,
+    pub epics: Vec<EpicSlim>,
     pub active_story: Option<Story>,
     pub user_id: Option<Uuid>,
     pub cache_dir: PathBuf,
@@ -29,6 +30,7 @@ impl Default for Cache {
             current_iterations: None,
             iteration_stories: None,
             iterations: Vec::new(),
+            epics: Vec::new(),
             user_id: None,
             active_story: None,
             cache_dir: Self::default_cache_dir(),

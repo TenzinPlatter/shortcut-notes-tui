@@ -5,7 +5,7 @@ use tui_scrollview::ScrollViewState;
 use std::path::PathBuf;
 
 use crate::{
-    api::{epic::Epic, iteration::Iteration, story::Story},
+    api::{epic::EpicSlim, iteration::Iteration, story::Story},
     app::pane::action_menu::ActionMenuState,
     cache::Cache,
     config::Config,
@@ -97,7 +97,7 @@ pub struct Model {
 pub struct DataState {
     pub stories: Vec<Story>,
     pub iterations: Vec<Iteration>,
-    pub epics: Vec<Epic>,
+    pub epics: Vec<EpicSlim>,
     pub current_iterations: Option<Vec<Iteration>>,
     pub active_story: Option<Story>,
     pub async_handles: Vec<JoinHandle<()>>,
@@ -115,12 +115,28 @@ pub struct UiState {
     pub active_view: ViewType,
     pub story_list: StoryListState,
     pub notes_list: NotesListState,
+    pub iteration_list: IterationListState,
+    pub epic_list: EpicListState,
     pub action_menu: ActionMenuState,
     pub description_modal: DescriptionModalState,
     pub show_keybinds_panel: bool,
     pub errors: Vec<ErrorInfo>,
     pub loading: LoadingState,
     pub throbber_state: ThrobberState,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct IterationListState {
+    pub selected_id: Option<i32>,
+    pub search_query: String,
+    pub search_active: bool,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct EpicListState {
+    pub selected_id: Option<i32>,
+    pub search_query: String,
+    pub search_active: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -164,7 +180,7 @@ impl Model {
         let mut model = Model {
             data: DataState {
                 stories: cache.iteration_stories.clone().unwrap_or_default(),
-                epics: Vec::new(),
+                epics: cache.epics.clone(),
                 current_iterations: cache.current_iterations.clone(),
                 active_story: cache.active_story.clone(),
                 async_handles: Vec::new(),
@@ -175,6 +191,7 @@ impl Model {
             cache,
         };
         model.ui.story_list.selected_story_id = model.data.stories.first().map(|s| s.id);
+        model.ui.epic_list.selected_id = model.data.epics.first().map(|e| e.id);
         model
     }
 }

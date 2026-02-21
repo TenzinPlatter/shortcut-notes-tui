@@ -56,6 +56,11 @@ pub enum Cmd {
         iteration_name: String,
         iteration_app_url: String,
     },
+    OpenEpicNote {
+        epic_id: i32,
+        epic_name: String,
+        epic_app_url: String,
+    },
     OpenDailyNote {
         path: PathBuf,
     },
@@ -107,7 +112,25 @@ pub async fn execute(
         }
 
         Cmd::FetchEpics => {
-            dbg_file!("FetchEpics not yet implemented");
+            let sender = sender.clone();
+            let api_client = api_client.clone();
+
+            let handle = tokio::spawn(async move {
+                match api_client.get_all_epics_slim(false).await {
+                    Ok(epics) => {
+                        sender.send(Msg::EpicsLoaded(epics)).ok();
+                    }
+                    Err(e) => {
+                        let info = ErrorInfo::new(
+                            "Failed to fetch epics".to_string(),
+                            e.to_string(),
+                        );
+                        sender.send(Msg::Error(info)).ok();
+                    }
+                }
+            });
+
+            model.data.async_handles.push(handle);
             Ok(())
         }
 
@@ -160,6 +183,7 @@ pub async fn execute(
         // TUI-suspending commands are handled in main_loop, not here
         Cmd::OpenNote { .. }
         | Cmd::OpenIterationNote { .. }
+        | Cmd::OpenEpicNote { .. }
         | Cmd::EditStoryContent { .. }
         | Cmd::CreateGitWorktree { .. }
         | Cmd::OpenDailyNote { .. } => {
@@ -240,6 +264,42 @@ pub fn open_iteration_note_in_editor(
         let frontmatter = format!(
             "---\niteration_id: it-{}\niteration_link: {}\niteration_name: {}\ncreated: {}\n---\n",
             iteration_id, iteration_app_url, iteration_name, today
+        );
+        f.write_all(frontmatter.as_bytes())?;
+    }
+
+    Command::new(&config.editor).arg(&path).status()?;
+    Ok(())
+}
+
+pub fn open_epic_note_in_editor(
+    epic_id: i32,
+    epic_name: String,
+    epic_app_url: String,
+    config: &Config,
+) -> anyhow::Result<()> {
+    let slug = slugify!(&epic_name);
+    let mut path = config.notes_dir.clone();
+    path.push(format!("{}.md", slug));
+
+    if path.is_dir() {
+        anyhow::bail!("Note path: {} is not a file", path.display());
+    }
+    if let Some(p) = path.parent() {
+        create_dir_all(p)?;
+    }
+
+    let mut f = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .read(true)
+        .open(&path)?;
+    let buf = read_to_string(&path)?;
+    if buf.is_empty() {
+        let today = crate::time::today();
+        let frontmatter = format!(
+            "---\nepic_id: ep-{}\nepic_link: {}\nepic_name: {}\ncreated: {}\n---\n",
+            epic_id, epic_app_url, epic_name, today
         );
         f.write_all(frontmatter.as_bytes())?;
     }

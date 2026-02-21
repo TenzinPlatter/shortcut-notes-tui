@@ -16,6 +16,7 @@ use crate::app::pane::action_menu::ActionMenu;
 use crate::error::{ERROR_NOTIFICATION_MAX_HEIGHT, ErrorInfo};
 use crate::view::description_modal::{DescriptionModal, centered_rect};
 use crate::view::keybinds_panel::KeybindsPanel;
+use crate::view::{EpicListView, IterationListView};
 use crate::view::{navbar::NavBar, notes_list::NotesListView, story_list::StoryListView};
 use crate::worktree::{create_worktree, get_repo_list, select_repo_with_fzf};
 use crate::{api::ApiClient, app::model::ViewType, config::Config};
@@ -48,6 +49,7 @@ impl App {
                     match cmd {
                         cmd::Cmd::OpenNote { .. }
                         | cmd::Cmd::OpenIterationNote { .. }
+                        | cmd::Cmd::OpenEpicNote { .. }
                         | cmd::Cmd::EditStoryContent { .. }
                         | cmd::Cmd::CreateGitWorktree { .. }
                         | cmd::Cmd::OpenDailyNote { .. } => {
@@ -152,6 +154,22 @@ impl App {
                 create_worktree(&path, &branch_name).await?;
             }
 
+            cmd::Cmd::OpenEpicNote {
+                epic_id,
+                epic_name,
+                epic_app_url,
+            } => {
+                with_suspended_tui(terminal, || {
+                    cmd::open_epic_note_in_editor(
+                        epic_id,
+                        epic_name,
+                        epic_app_url,
+                        &self.model.config,
+                    )
+                })?;
+                self.sender.send(msg::Msg::NoteOpened).ok();
+            }
+
             cmd::Cmd::OpenDailyNote { path } => {
                 with_suspended_tui(terminal, || {
                     cmd::open_daily_note_with_frontmatter(&self.model.config, &path)
@@ -237,7 +255,23 @@ impl App {
                 notes_view.render_ref(chunks[1], frame.buffer_mut());
             }
 
-            ViewType::Epics | ViewType::Search | ViewType::Iterations => {
+            ViewType::Iterations => {
+                let active = self.model.data.current_iterations.as_deref().unwrap_or(&[]);
+                let iteration_list = IterationListView::new(
+                    active,
+                    &self.model.data.iterations,
+                    &self.model.ui.iteration_list,
+                );
+                iteration_list.render_ref(chunks[1], frame.buffer_mut());
+            }
+
+            ViewType::Epics => {
+                let epic_list =
+                    EpicListView::new(&self.model.data.epics, &self.model.ui.epic_list);
+                epic_list.render_ref(chunks[1], frame.buffer_mut());
+            }
+
+            ViewType::Search => {
                 // Placeholder for future views
                 let placeholder = Paragraph::new("Coming soon...").block(Block::bordered());
                 placeholder.render(chunks[1], frame.buffer_mut());

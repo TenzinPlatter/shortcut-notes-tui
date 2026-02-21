@@ -8,6 +8,7 @@ use crate::{
         ApiClient,
         story::{Story, StorySlim},
     },
+    custom_list::LinearListItem,
     dbg_file,
 };
 
@@ -28,6 +29,11 @@ pub struct IterationSlim {
     end_date: NaiveDate,
 }
 
+impl LinearListItem for Iteration {
+    fn id(&self) -> i32 { self.id }
+    fn label(&self) -> &str { &self.name }
+}
+
 impl ApiClient {
     pub async fn get_current_iterations(&self) -> anyhow::Result<Vec<Iteration>> {
         let response = self.get("iterations").await?;
@@ -43,6 +49,22 @@ impl ApiClient {
             let response = self.get(&format!("iterations/{id}")).await?;
             // add the context to cast response to an anyhow error, but we will filter out errors
             // so don't need a real message
+            response.json::<Iteration>().await.context("")
+        }))
+        .await
+        .into_iter()
+        .filter_map(|res| res.ok())
+        .collect();
+
+        Ok(iterations)
+    }
+
+    pub async fn get_all_iterations(&self) -> anyhow::Result<Vec<Iteration>> {
+        let response = self.get("iterations").await?;
+        let iterations_slim = response.json::<Vec<IterationSlim>>().await?;
+
+        let iterations = join_all(iterations_slim.iter().map(|slim| async move {
+            let response = self.get(&format!("iterations/{}", slim.id)).await?;
             response.json::<Iteration>().await.context("")
         }))
         .await

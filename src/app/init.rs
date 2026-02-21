@@ -78,7 +78,8 @@ impl App {
         };
 
         // Send messages so UI updates as if data loaded normally
-        let _ = sender.send(Msg::IterationsLoaded(vec![iteration]));
+        let _ = sender.send(Msg::IterationsLoaded(vec![iteration.clone()]));
+        let _ = sender.send(Msg::AllIterationsLoaded(vec![iteration]));
         let _ = sender.send(Msg::StoriesLoaded {
             stories,
             from_cache: false,
@@ -96,10 +97,12 @@ impl App {
 }
 
 async fn fetch_info_from_api(api_client: ApiClient, sender: UnboundedSender<Msg>) -> Vec<JoinHandle<()>> {
+    let iteration_client = api_client.clone();
+    let iteration_sender = sender.clone();
     let current_iteration_handle = tokio::spawn(async move {
-        match api_client.get_current_iterations().await {
+        match iteration_client.get_current_iterations().await {
             Ok(iterations) => {
-                let _ = sender.send(Msg::IterationsLoaded(iterations));
+                let _ = iteration_sender.send(Msg::IterationsLoaded(iterations));
             }
             Err(e) => {
                 let info = ErrorInfo::new(
@@ -107,11 +110,44 @@ async fn fetch_info_from_api(api_client: ApiClient, sender: UnboundedSender<Msg>
                     e.to_string(),
                 );
 
-                let _ = sender.send(Msg::Error(info));
+                let _ = iteration_sender.send(Msg::Error(info));
             }
         };
     });
 
-    vec![current_iteration_handle]
+    let all_iter_client = api_client.clone();
+    let all_iter_sender = sender.clone();
+
+    let epics_handle = tokio::spawn(async move {
+        match api_client.get_all_epics_slim(false).await {
+            Ok(epics) => {
+                let _ = sender.send(Msg::EpicsLoaded(epics));
+            }
+            Err(e) => {
+                let info = ErrorInfo::new(
+                    "Failed to fetch epics".to_string(),
+                    e.to_string(),
+                );
+                let _ = sender.send(Msg::Error(info));
+            }
+        }
+    });
+
+    let all_iterations_handle = tokio::spawn(async move {
+        match all_iter_client.get_all_iterations().await {
+            Ok(iterations) => {
+                let _ = all_iter_sender.send(Msg::AllIterationsLoaded(iterations));
+            }
+            Err(e) => {
+                let info = ErrorInfo::new(
+                    "Failed to fetch all iterations".to_string(),
+                    e.to_string(),
+                );
+                let _ = all_iter_sender.send(Msg::Error(info));
+            }
+        }
+    });
+
+    vec![current_iteration_handle, epics_handle, all_iterations_handle]
 }
 

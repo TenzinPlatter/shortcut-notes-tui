@@ -8,8 +8,8 @@ use crate::{
         App,
         cmd::Cmd,
         model::{LoadingState, ViewType},
-        msg::Msg,
-        pane::{action_menu, description_modal, notes_list, story_list},
+        msg::{EpicListMsg, IterationListMsg, Msg},
+        pane::{action_menu, description_modal, epic_list, iteration_list, notes_list, story_list},
     },
     dbg_file,
     error::ErrorInfo,
@@ -47,6 +47,16 @@ impl App {
                 &mut self.model.ui.notes_list,
                 notes_msg,
             ),
+
+            Msg::IterationList(msg) => {
+                let current = self.model.data.current_iterations.as_deref().unwrap_or(&[]);
+                let all = &self.model.data.iterations;
+                iteration_list::update(&mut self.model.ui.iteration_list, current, all, msg)
+            }
+
+            Msg::EpicList(msg) => {
+                epic_list::update(&mut self.model.ui.epic_list, &self.model.data.epics, msg)
+            }
 
             Msg::StoriesLoaded {
                 stories,
@@ -139,12 +149,35 @@ impl App {
                 vec![Cmd::WriteCache]
             }
 
-            Msg::EpicsLoaded(epics) => {
-                self.model.data.epics = epics;
-                vec![Cmd::None]
+            Msg::EpicsLoaded(mut epics) => {
+                epics.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+
+                // Skip re-render if the ID set hasn't changed (same as StoriesLoaded)
+                if self.model.data.epics.len() == epics.len()
+                    && self
+                        .model
+                        .data
+                        .epics
+                        .iter()
+                        .zip(epics.iter())
+                        .all(|(a, b)| a.id == b.id)
+                {
+                    return vec![Cmd::None];
+                }
+
+                if self.model.ui.epic_list.selected_id.is_none() {
+                    self.model.ui.epic_list.selected_id = epics.first().map(|e| e.id);
+                }
+                self.model.data.epics = epics.clone();
+                self.model.cache.epics = epics;
+                vec![Cmd::WriteCache]
             }
 
-            Msg::IterationsLoaded(iterations) => {
+            Msg::IterationsLoaded(mut iterations) => {
+                iterations.sort_by(|a, b| b.start_date.cmp(&a.start_date));
+                if self.model.ui.iteration_list.selected_id.is_none() {
+                    self.model.ui.iteration_list.selected_id = iterations.first().map(|it| it.id);
+                }
                 self.model.data.current_iterations = Some(iterations.clone());
                 self.model.cache.current_iterations = Some(iterations.clone());
                 self.model.ui.loading = LoadingState::FetchingStories;
@@ -159,6 +192,13 @@ impl App {
                         iteration_ids: iterations.iter().map(|it| it.id).collect(),
                     },
                 ]
+            }
+
+            Msg::AllIterationsLoaded(mut iterations) => {
+                iterations.sort_by(|a, b| b.start_date.cmp(&a.start_date));
+                self.model.data.iterations = iterations.clone();
+                self.model.cache.iterations = iterations;
+                vec![Cmd::WriteCache]
             }
 
             Msg::SwitchToView(view_type) => {
@@ -233,6 +273,68 @@ impl App {
         }
     }
 
+    /// Intercepts keys for search state in Iteration/Epic views.
+    ///
+    /// Two modes:
+    /// - **Active** (`search_active = true`): typing mode. j/k are consumed (not
+    ///   navigation), Enter passes through, Esc deactivates but keeps the query.
+    /// - **Inactive with query** (`search_active = false`, query non-empty): list is
+    ///   filtered but navigation works normally. Esc clears the query entirely.
+    fn try_handle_search_key(&mut self, key: KeyEvent) -> Option<Vec<Cmd>> {
+        let (search_active, has_query) = match self.model.ui.active_view {
+            ViewType::Iterations => (
+                self.model.ui.iteration_list.search_active,
+                !self.model.ui.iteration_list.search_query.is_empty(),
+            ),
+            ViewType::Epics => (
+                self.model.ui.epic_list.search_active,
+                !self.model.ui.epic_list.search_query.is_empty(),
+            ),
+            _ => return None,
+        };
+
+        if search_active {
+            let msg = match key.code {
+                // Enter still opens the selected item
+                KeyCode::Enter => return None,
+                // j/k are consumed — use Esc to exit typing mode first
+                KeyCode::Char('j') | KeyCode::Down | KeyCode::Char('k') | KeyCode::Up => {
+                    return Some(vec![Cmd::None]);
+                }
+                // Esc: exit typing mode, keep query so the list stays filtered
+                KeyCode::Esc => match self.model.ui.active_view {
+                    ViewType::Iterations => Msg::IterationList(IterationListMsg::DeactivateSearch),
+                    ViewType::Epics => Msg::EpicList(EpicListMsg::DeactivateSearch),
+                    _ => unreachable!(),
+                },
+                KeyCode::Backspace => match self.model.ui.active_view {
+                    ViewType::Iterations => Msg::IterationList(IterationListMsg::SearchBackspace),
+                    ViewType::Epics => Msg::EpicList(EpicListMsg::SearchBackspace),
+                    _ => unreachable!(),
+                },
+                KeyCode::Char(c) => match self.model.ui.active_view {
+                    ViewType::Iterations => Msg::IterationList(IterationListMsg::SearchInput(c)),
+                    ViewType::Epics => Msg::EpicList(EpicListMsg::SearchInput(c)),
+                    _ => unreachable!(),
+                },
+                _ => return Some(vec![Cmd::None]),
+            };
+            return Some(self.update(msg));
+        }
+
+        // Search inactive but query still set: Esc clears it, everything else passes through
+        if has_query && key.code == KeyCode::Esc {
+            let msg = match self.model.ui.active_view {
+                ViewType::Iterations => Msg::IterationList(IterationListMsg::ClearSearch),
+                ViewType::Epics => Msg::EpicList(EpicListMsg::ClearSearch),
+                _ => unreachable!(),
+            };
+            return Some(self.update(msg));
+        }
+
+        None
+    }
+
     fn handle_key_input(&mut self, key: KeyEvent) -> Vec<Cmd> {
         // Keybinds panel takes highest priority
         if self.model.ui.show_keybinds_panel {
@@ -258,6 +360,11 @@ impl App {
             } else {
                 vec![Cmd::None]
             };
+        }
+
+        // Search bar intercepts most keys when active in Iteration/Epic views
+        if let Some(cmds) = self.try_handle_search_key(key) {
+            return cmds;
         }
 
         let app_key = Key::from_key_event(key);
@@ -290,6 +397,22 @@ impl App {
 
         // Route to active view's key handler
         match self.model.ui.active_view {
+            ViewType::Iterations => {
+                if key.code == KeyCode::Char('/') {
+                    return self.update(Msg::IterationList(IterationListMsg::ActivateSearch));
+                }
+                if let Some(msg) = iteration_list::key_to_msg(key) {
+                    return self.update(Msg::IterationList(msg));
+                }
+            }
+            ViewType::Epics => {
+                if key.code == KeyCode::Char('/') {
+                    return self.update(Msg::EpicList(EpicListMsg::ActivateSearch));
+                }
+                if let Some(msg) = epic_list::key_to_msg(key) {
+                    return self.update(Msg::EpicList(msg));
+                }
+            }
             ViewType::Stories => {
                 if key.code == KeyCode::Enter {
                     return self.update(Msg::ToggleActionMenu);

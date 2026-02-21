@@ -33,6 +33,7 @@ throbber-widgets-tui = "0.10.0"
 tui-scrollview = "0.6"
 tui-widget-list = "0.15"
 open = "5.3.3"
+fuzzy-matcher = "0.3"
 
 [profile.release]
 opt-level = "s"

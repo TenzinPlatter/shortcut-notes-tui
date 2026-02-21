@@ -1,4 +1,4 @@
-use std::{fmt::format, fs, process::Command};
+use std::{fs, process::Command};
 
 use anyhow::Context;
 use ratatui::DefaultTerminal;
@@ -24,6 +24,7 @@ pub mod app;
 pub mod cache;
 pub mod cli;
 pub mod config;
+pub mod custom_list;
 pub mod dummy;
 pub mod error;
 pub mod keybindings;
@@ -132,9 +133,7 @@ pub async fn handle_command(
                     iteration_app_url,
                 );
 
-                let status = Command::new("cat")
-                    .arg(note.path)
-                    .status()?;
+                let status = Command::new("cat").arg(note.path).status()?;
 
                 if !status.success() {
                     anyhow::bail!("Failed to cat not for story {}", &story.name);
