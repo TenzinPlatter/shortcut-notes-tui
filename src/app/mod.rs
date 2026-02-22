@@ -1,5 +1,6 @@
 use std::fs::read_to_string;
 use std::io::Write;
+use std::time::Instant;
 
 use anyhow::Result;
 use crossterm::ExecutableCommand;
@@ -13,6 +14,7 @@ use tempfile::NamedTempFile;
 use tokio::sync::mpsc;
 
 use crate::app::pane::action_menu::ActionMenu;
+use crate::dbg_file;
 use crate::error::{ERROR_NOTIFICATION_MAX_HEIGHT, ErrorInfo};
 use crate::view::description_modal::{DescriptionModal, centered_rect};
 use crate::view::keybinds_panel::KeybindsPanel;
@@ -40,9 +42,12 @@ pub struct App {
 impl App {
     pub async fn main_loop(&mut self, terminal: &mut DefaultTerminal) -> Result<()> {
         while !self.exit {
+            let start = Instant::now();
             terminal.draw(|frame| self.draw(frame))?;
 
+            let mut x = None;
             if let Some(msg) = self.poll_for_message().await? {
+                x = Some(msg.clone());
                 let commands = self.update(msg);
 
                 for cmd in commands {
@@ -67,6 +72,12 @@ impl App {
                     }
                 }
             }
+
+            let elapsed = start.elapsed();
+            if elapsed.as_millis() > 16 {
+                dbg_file!("Slow frame: {:?}ms, msg: {:?}", elapsed.as_millis(), x);
+            }
+
         }
 
         Ok(())

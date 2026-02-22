@@ -6,6 +6,7 @@ use std::{
 };
 
 use serde::{Deserialize, Serialize};
+use tokio::task::spawn_blocking;
 use uuid::Uuid;
 
 use crate::{
@@ -92,10 +93,11 @@ impl Cache {
         }
     }
 
-    pub fn write(&self) -> anyhow::Result<()> {
+    pub async fn write(&self) -> anyhow::Result<()> {
+        use tokio::{fs::File, io::AsyncWriteExt};
         let cache_file = Self::get_cache_file(self.cache_dir.clone());
-        let mut f = File::create(cache_file)?;
-        f.write_all(&serde_json::to_string(self)?.into_bytes())?;
+        let mut f = File::create(cache_file).await?;
+        f.write_all(&serde_json::to_string(self)?.into_bytes()).await?;
 
         Ok(())
     }

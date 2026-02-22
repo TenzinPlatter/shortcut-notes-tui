@@ -76,7 +76,7 @@ pub async fn execute(
         Cmd::None => Ok(()),
 
         Cmd::WriteCache => {
-            model.cache.write()?;
+            model.cache.write().await?;
             sender.send(Msg::CacheWritten).ok();
             Ok(())
         }

@@ -31,7 +31,7 @@ impl App {
         };
 
         cache.user_id = Some(api_client.user_id);
-        cache.write()?;
+        cache.write().await?;
 
         let (sender, receiver) = mpsc::unbounded_channel();
         let sender_clone = sender.clone();
