@@ -297,10 +297,6 @@ impl App {
             let msg = match key.code {
                 // Enter still opens the selected item
                 KeyCode::Enter => return None,
-                // j/k are consumed — use Esc to exit typing mode first
-                KeyCode::Char('j') | KeyCode::Down | KeyCode::Char('k') | KeyCode::Up => {
-                    return Some(vec![Cmd::None]);
-                }
                 // Esc: exit typing mode, keep query so the list stays filtered
                 KeyCode::Esc => match self.model.ui.active_view {
                     ViewType::Iterations => Msg::IterationList(IterationListMsg::DeactivateSearch),
