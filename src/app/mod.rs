@@ -16,6 +16,7 @@ use tokio::sync::mpsc;
 use crate::app::pane::action_menu::ActionMenu;
 use crate::dbg_file;
 use crate::error::{ERROR_NOTIFICATION_MAX_HEIGHT, ErrorInfo};
+use crate::view::create_note_modal::CreateNoteModal;
 use crate::view::description_modal::{DescriptionModal, centered_rect};
 use crate::view::keybinds_panel::KeybindsPanel;
 use crate::view::{EpicListView, IterationListView};
@@ -57,7 +58,8 @@ impl App {
                         | cmd::Cmd::OpenEpicNote { .. }
                         | cmd::Cmd::EditStoryContent { .. }
                         | cmd::Cmd::CreateGitWorktree { .. }
-                        | cmd::Cmd::OpenDailyNote { .. } => {
+                        | cmd::Cmd::OpenDailyNote { .. }
+                        | cmd::Cmd::OpenScratchNote { .. } => {
                             self.handle_suspended_cmd(cmd, terminal).await?;
                         }
                         _ => {
@@ -184,6 +186,13 @@ impl App {
             cmd::Cmd::OpenDailyNote { path } => {
                 with_suspended_tui(terminal, || {
                     cmd::open_daily_note_with_frontmatter(&self.model.config, &path)
+                })?;
+                self.sender.send(msg::Msg::NoteOpened).ok();
+            }
+
+            cmd::Cmd::OpenScratchNote { path, name } => {
+                with_suspended_tui(terminal, || {
+                    cmd::open_scratch_note_in_editor(&name, &path, &self.model.config)
                 })?;
                 self.sender.send(msg::Msg::NoteOpened).ok();
             }
@@ -316,6 +325,14 @@ impl App {
                 frame.buffer_mut(),
                 &mut self.model.ui.description_modal.scroll_view_state,
             );
+        }
+
+        // Render create note modal on top when showing
+        if self.model.ui.create_note_modal.is_showing {
+            let area = frame.area();
+            Clear.render(centered_rect(50, 30, area), frame.buffer_mut());
+            let modal = CreateNoteModal::new(&self.model.ui.create_note_modal);
+            modal.render_ref(area, frame.buffer_mut());
         }
 
         // Render keybinds panel (above description modal, below errors)

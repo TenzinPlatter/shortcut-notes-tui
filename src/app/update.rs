@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use crossterm::event::{KeyCode, KeyEvent};
 
 use crate::{
@@ -8,8 +6,8 @@ use crate::{
         App,
         cmd::Cmd,
         model::{LoadingState, ViewType},
-        msg::{EpicListMsg, IterationListMsg, Msg},
-        pane::{action_menu, description_modal, epic_list, iteration_list, notes_list, story_list},
+        msg::{CreateNoteModalMsg, EpicListMsg, IterationListMsg, Msg},
+        pane::{action_menu, create_note_modal, description_modal, epic_list, iteration_list, notes_list, story_list},
     },
     dbg_file,
     error::ErrorInfo,
@@ -204,13 +202,22 @@ impl App {
             Msg::SwitchToView(view_type) => {
                 self.model.ui.active_view = view_type;
                 if view_type == ViewType::Notes {
-                    let (daily, other) = notes_list::scan_notes(&self.model.config.notes_dir);
+                    let (daily, stories, iterations, epics, scratch) =
+                        notes_list::scan_notes(&self.model.config.notes_dir);
                     self.model.ui.notes_list.daily_notes = daily;
-                    self.model.ui.notes_list.other_notes = other;
+                    self.model.ui.notes_list.story_notes = stories;
+                    self.model.ui.notes_list.iteration_notes = iterations;
+                    self.model.ui.notes_list.epic_notes = epics;
+                    self.model.ui.notes_list.scratch_notes = scratch;
                     if self.model.ui.notes_list.selected_path.is_none() {
-                        self.model.ui.notes_list.selected_path =
-                            self.model.ui.notes_list.daily_notes.first().cloned()
-                                .or_else(|| self.model.ui.notes_list.other_notes.first().cloned());
+                        let nl = &self.model.ui.notes_list;
+                        let first = nl.daily_notes.first()
+                            .or_else(|| nl.story_notes.first())
+                            .or_else(|| nl.iteration_notes.first())
+                            .or_else(|| nl.epic_notes.first())
+                            .or_else(|| nl.scratch_notes.first())
+                            .cloned();
+                        self.model.ui.notes_list.selected_path = first;
                     }
                 }
                 vec![Cmd::None]
@@ -218,9 +225,13 @@ impl App {
 
             Msg::NoteOpened => {
                 if self.model.ui.active_view == ViewType::Notes {
-                    let (daily, other) = notes_list::scan_notes(&self.model.config.notes_dir);
+                    let (daily, stories, iterations, epics, scratch) =
+                        notes_list::scan_notes(&self.model.config.notes_dir);
                     self.model.ui.notes_list.daily_notes = daily;
-                    self.model.ui.notes_list.other_notes = other;
+                    self.model.ui.notes_list.story_notes = stories;
+                    self.model.ui.notes_list.iteration_notes = iterations;
+                    self.model.ui.notes_list.epic_notes = epics;
+                    self.model.ui.notes_list.scratch_notes = scratch;
                 }
                 vec![Cmd::None]
             }
@@ -270,6 +281,12 @@ impl App {
             Msg::DescriptionModal(modal_msg) => {
                 description_modal::update(&mut self.model.ui.description_modal, modal_msg)
             }
+
+            Msg::CreateNoteModal(modal_msg) => create_note_modal::update(
+                &mut self.model.ui.create_note_modal,
+                &self.model.config,
+                modal_msg,
+            ),
         }
     }
 
@@ -358,6 +375,15 @@ impl App {
             };
         }
 
+        // Create note modal intercepts all keys when showing
+        if self.model.ui.create_note_modal.is_showing {
+            return if let Some(modal_msg) = create_note_modal::key_to_msg(key) {
+                self.update(Msg::CreateNoteModal(modal_msg))
+            } else {
+                vec![Cmd::None]
+            };
+        }
+
         // Search bar intercepts most keys when active in Iteration/Epic views
         if let Some(cmds) = self.try_handle_search_key(key) {
             return cmds;
@@ -380,11 +406,7 @@ impl App {
                 }
                 Key::DailyNote => {
                     let today = crate::time::today();
-                    let path = PathBuf::from(format!(
-                        "{}/daily-{}.md",
-                        self.config.notes_dir.display(),
-                        today
-                    ));
+                    let path = self.config.notes_dir.join("daily").join(format!("{}.md", today));
                     return vec![Cmd::OpenDailyNote { path }];
                 }
                 _ => {}
@@ -475,6 +497,9 @@ impl App {
                 }
             }
             ViewType::Notes => {
+                if key.code == KeyCode::Char('n') {
+                    return self.update(Msg::CreateNoteModal(CreateNoteModalMsg::Open));
+                }
                 if let Some(msg) = notes_list::key_to_msg(key) {
                     return self.update(Msg::NotesList(msg));
                 }

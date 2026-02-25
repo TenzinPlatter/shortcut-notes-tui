@@ -1,4 +1,5 @@
 pub mod action_item_builder;
+pub mod create_note_modal;
 pub mod epic_list;
 pub mod keybinds_panel;
 pub mod description_modal;

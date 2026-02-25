@@ -119,6 +119,7 @@ pub struct UiState {
     pub epic_list: EpicListState,
     pub action_menu: ActionMenuState,
     pub description_modal: DescriptionModalState,
+    pub create_note_modal: CreateNoteModalState,
     pub show_keybinds_panel: bool,
     pub errors: Vec<ErrorInfo>,
     pub loading: LoadingState,
@@ -158,7 +159,16 @@ impl Default for StoryListState {
 pub struct NotesListState {
     pub selected_path: Option<PathBuf>,
     pub daily_notes: Vec<PathBuf>,
-    pub other_notes: Vec<PathBuf>,
+    pub story_notes: Vec<PathBuf>,
+    pub iteration_notes: Vec<PathBuf>,
+    pub epic_notes: Vec<PathBuf>,
+    pub scratch_notes: Vec<PathBuf>,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct CreateNoteModalState {
+    pub is_showing: bool,
+    pub input: String,
 }
 
 impl StoryListState {

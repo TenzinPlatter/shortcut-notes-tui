@@ -45,12 +45,13 @@ impl<T: LinearListItem> WidgetRef for LinearList<'_, T> {
         }
 
         let mut y = inner.y;
-        for item in self.items {
-            if y + 1 >= inner.y + inner.height {
+        for (i, item) in self.items.iter().enumerate() {
+            if y >= inner.y + inner.height {
                 break;
             }
 
             let is_selected = self.selected_id == Some(item.id());
+            let is_last = i == self.items.len() - 1;
 
             let name_style = if is_selected {
                 Style::default().bold()
@@ -61,7 +62,7 @@ impl<T: LinearListItem> WidgetRef for LinearList<'_, T> {
             buf.set_line(inner.x, y, &name_line, inner.width);
             y += 1;
 
-            if y < inner.y + inner.height {
+            if !is_last && y < inner.y + inner.height {
                 let divider_style = if is_selected {
                     Style::default().yellow()
                 } else {

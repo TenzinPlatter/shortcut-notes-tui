@@ -22,10 +22,9 @@ impl<'a> NotesListView<'a> {
     }
 }
 
-/// Format a daily note filename like `daily-2026-02-18` into "Tue, Feb 18 2026"
+/// Format a daily note stem like `2026-02-18` into "Tue, Feb 18 2026"
 fn format_daily_name(stem: &str) -> Option<String> {
-    let date_str = stem.strip_prefix("daily-")?;
-    let date = NaiveDate::parse_from_str(date_str, "%Y-%m-%d").ok()?;
+    let date = NaiveDate::parse_from_str(stem, "%Y-%m-%d").ok()?;
     Some(date.format("%a, %b %-d %Y").to_string())
 }
 
@@ -63,7 +62,13 @@ fn display_name(path: &Path, is_daily: bool) -> String {
 
 impl<'a> WidgetRef for NotesListView<'a> {
     fn render_ref(&self, area: Rect, buf: &mut Buffer) {
-        if self.state.daily_notes.is_empty() && self.state.other_notes.is_empty() {
+        let s = self.state;
+        if s.daily_notes.is_empty()
+            && s.story_notes.is_empty()
+            && s.iteration_notes.is_empty()
+            && s.epic_notes.is_empty()
+            && s.scratch_notes.is_empty()
+        {
             let block = Block::bordered().border_set(border::THICK);
             let inner = block.inner(area);
             block.render(area, buf);
@@ -83,8 +88,11 @@ impl<'a> WidgetRef for NotesListView<'a> {
         }
 
         let sections: Vec<(&str, &[PathBuf], bool)> = vec![
-            ("Daily Notes", &self.state.daily_notes, true),
-            ("Iteration Notes", &self.state.other_notes, false),
+            ("Daily Notes",     &self.state.daily_notes,     true),
+            ("Story Notes",     &self.state.story_notes,     false),
+            ("Iteration Notes", &self.state.iteration_notes, false),
+            ("Epic Notes",      &self.state.epic_notes,      false),
+            ("Scratch Notes",   &self.state.scratch_notes,   false),
         ];
 
         let mut constraints = Vec::new();
@@ -93,8 +101,8 @@ impl<'a> WidgetRef for NotesListView<'a> {
                 continue;
             }
             constraints.push(Constraint::Length(1));
-            // notes * 2 lines + 2 for border
-            constraints.push(Constraint::Length((notes.len() * 2 + 2) as u16));
+            // notes * 2 lines + 1 for border (no trailing divider on last item)
+            constraints.push(Constraint::Length((notes.len() * 2 + 1) as u16));
             constraints.push(Constraint::Length(1));
         }
 
@@ -129,12 +137,13 @@ impl<'a> WidgetRef for NotesListView<'a> {
             list_block.render(list_area, buf);
 
             let mut y = items_area.y;
-            for note_path in *notes {
-                if y + 1 >= items_area.y + items_area.height {
+            for (i, note_path) in notes.iter().enumerate() {
+                if y >= items_area.y + items_area.height {
                     break;
                 }
 
                 let is_selected = self.state.selected_path.as_ref() == Some(note_path);
+                let is_last = i == notes.len() - 1;
                 let name = display_name(note_path, *is_daily);
 
                 let name_style = if is_selected {
@@ -146,7 +155,7 @@ impl<'a> WidgetRef for NotesListView<'a> {
                 buf.set_line(items_area.x, y, &name_line, items_area.width);
                 y += 1;
 
-                if y < items_area.y + items_area.height {
+                if !is_last && y < items_area.y + items_area.height {
                     let divider_style = if is_selected {
                         Style::default().yellow()
                     } else {

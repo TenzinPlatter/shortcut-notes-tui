@@ -26,6 +26,7 @@ impl Note {
         // TODO: date + don't create a new note at each time
         // path.push(format!("{}", now.year()));
         // path.push(format!("{}", now.month()));
+        path.push("stories");
         path.push(format!("{}.md", &frontmatter.slug_id));
 
         Self { frontmatter, path }

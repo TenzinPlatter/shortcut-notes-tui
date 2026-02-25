@@ -13,6 +13,7 @@ pub enum Msg {
     EpicList(EpicListMsg),
     ActionMenu(ActionMenuMsg),
     DescriptionModal(DescriptionModalMsg),
+    CreateNoteModal(CreateNoteModalMsg),
     StoriesLoaded {
         stories: Vec<Story>,
         from_cache: bool,
@@ -90,4 +91,13 @@ pub enum DescriptionModalMsg {
     ScrollPageDown,
     ScrollToTop,
     ScrollToBottom,
+}
+
+#[derive(Debug, Clone)]
+pub enum CreateNoteModalMsg {
+    Open,
+    Close,
+    TextInput(char),
+    TextBackspace,
+    Accept,
 }

@@ -64,6 +64,10 @@ pub enum Cmd {
     OpenDailyNote {
         path: PathBuf,
     },
+    OpenScratchNote {
+        path: PathBuf,
+        name: String,
+    },
 }
 
 pub async fn execute(
@@ -186,7 +190,8 @@ pub async fn execute(
         | Cmd::OpenEpicNote { .. }
         | Cmd::EditStoryContent { .. }
         | Cmd::CreateGitWorktree { .. }
-        | Cmd::OpenDailyNote { .. } => {
+        | Cmd::OpenDailyNote { .. }
+        | Cmd::OpenScratchNote { .. } => {
             unreachable!("TUI-suspending commands should be handled in main_loop")
         }
     }
@@ -244,6 +249,7 @@ pub fn open_iteration_note_in_editor(
 ) -> anyhow::Result<()> {
     let slug = slugify!(&iteration_name);
     let mut path = config.notes_dir.clone();
+    path.push("iterations");
     path.push(format!("{}.md", slug));
 
     if path.is_dir() {
@@ -280,6 +286,7 @@ pub fn open_epic_note_in_editor(
 ) -> anyhow::Result<()> {
     let slug = slugify!(&epic_name);
     let mut path = config.notes_dir.clone();
+    path.push("epics");
     path.push(format!("{}.md", slug));
 
     if path.is_dir() {
@@ -339,6 +346,31 @@ pub fn open_daily_note_with_frontmatter(config: &Config, path: &Path) -> anyhow:
     }
 
     Ok(())
+}
+
+pub fn open_scratch_note_in_editor(name: &str, path: &Path, config: &Config) -> anyhow::Result<()> {
+    if path.is_dir() {
+        anyhow::bail!("Note path: {} is not a file", path.display());
+    }
+
+    if let Some(p) = path.parent() {
+        create_dir_all(p)?;
+    }
+
+    let needs_frontmatter = if path.is_file() {
+        read_to_string(path)?.is_empty()
+    } else {
+        true
+    };
+
+    if needs_frontmatter {
+        let today = crate::time::today();
+        let frontmatter = format!("---\nname: {}\ncreated: {}\ntype: scratch\n---\n", name, today);
+        let mut f = File::create(path)?;
+        f.write_all(frontmatter.as_bytes())?;
+    }
+
+    open_in_editor(config, path)
 }
 
 pub async fn open_tmux_session(name: &str) -> anyhow::Result<()> {

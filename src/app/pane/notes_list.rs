@@ -9,16 +9,14 @@ use crate::{
 
 pub use crate::app::model::NotesListState;
 
-/// Scans the notes directory and classifies files into daily notes and other notes.
-/// Daily notes match the pattern `daily-*.md`.
-/// Both lists are sorted by filename descending (newest date first).
-pub fn scan_notes(notes_dir: &Path) -> (Vec<PathBuf>, Vec<PathBuf>) {
-    let mut daily = Vec::new();
-    let mut other = Vec::new();
+/// Scans one subdirectory of the notes directory and returns `.md` files sorted descending.
+fn scan_subdir(notes_dir: &Path, subdir: &str) -> Vec<PathBuf> {
+    let dir = notes_dir.join(subdir);
+    let mut notes = Vec::new();
 
-    let entries = match std::fs::read_dir(notes_dir) {
+    let entries = match std::fs::read_dir(&dir) {
         Ok(entries) => entries,
-        Err(_) => return (daily, other),
+        Err(_) => return notes,
     };
 
     for entry in entries.flatten() {
@@ -26,36 +24,35 @@ pub fn scan_notes(notes_dir: &Path) -> (Vec<PathBuf>, Vec<PathBuf>) {
         if !path.is_file() {
             continue;
         }
-        let ext = path.extension().and_then(|e| e.to_str());
-        if ext != Some("md") {
+        if path.extension().and_then(|e| e.to_str()) != Some("md") {
             continue;
         }
-
-        let filename = match path.file_name().and_then(|f| f.to_str()) {
-            Some(f) => f.to_string(),
-            None => continue,
-        };
-
-        if filename.starts_with("daily-") {
-            daily.push(path);
-        } else {
-            other.push(path);
-        }
+        notes.push(path);
     }
 
-    // Sort descending by filename (newest dates first)
-    daily.sort_by(|a, b| b.file_name().cmp(&a.file_name()));
-    other.sort_by(|a, b| b.file_name().cmp(&a.file_name()));
-
-    (daily, other)
+    notes.sort_by(|a, b| b.file_name().cmp(&a.file_name()));
+    notes
 }
 
-/// Returns a flat list of all notes: daily notes first, then other notes.
+/// Scans all note subdirectories and returns per-category vecs.
+pub fn scan_notes(notes_dir: &Path) -> (Vec<PathBuf>, Vec<PathBuf>, Vec<PathBuf>, Vec<PathBuf>, Vec<PathBuf>) {
+    let daily = scan_subdir(notes_dir, "daily");
+    let stories = scan_subdir(notes_dir, "stories");
+    let iterations = scan_subdir(notes_dir, "iterations");
+    let epics = scan_subdir(notes_dir, "epics");
+    let scratch = scan_subdir(notes_dir, "scratch");
+    (daily, stories, iterations, epics, scratch)
+}
+
+/// Returns a flat list of all notes in display order.
 fn all_notes(state: &NotesListState) -> Vec<&PathBuf> {
     state
         .daily_notes
         .iter()
-        .chain(state.other_notes.iter())
+        .chain(state.story_notes.iter())
+        .chain(state.iteration_notes.iter())
+        .chain(state.epic_notes.iter())
+        .chain(state.scratch_notes.iter())
         .collect()
 }
 

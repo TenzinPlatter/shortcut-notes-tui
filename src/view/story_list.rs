@@ -144,7 +144,7 @@ impl<'a> WidgetRef for StoryListView<'a> {
         let mut constraints = Vec::new();
         for section in &sections {
             constraints.push(Constraint::Length(1));
-            constraints.push(Constraint::Length((section.stories.len() * 2 + 2) as u16));
+            constraints.push(Constraint::Length((section.stories.len() * 2 + 1) as u16));
             constraints.push(Constraint::Length(1));
         }
 
@@ -191,6 +191,7 @@ impl<'a> WidgetRef for StoryListView<'a> {
                     None => false,
                 };
                 let is_completed = story.completed;
+                let is_last = context.index == section_stories.len() - 1;
 
                 let widget = StoryItemWidget::new(
                     story,
@@ -198,6 +199,7 @@ impl<'a> WidgetRef for StoryListView<'a> {
                     context.is_selected,
                     width,
                     is_completed,
+                    is_last,
                 );
                 let height = widget.height();
 
