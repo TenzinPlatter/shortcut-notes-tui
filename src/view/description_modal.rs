@@ -61,18 +61,13 @@ impl StatefulWidget for DescriptionModal<'_> {
             trimmed.to_string()
         };
 
-        let paragraph = Paragraph::new(Text::from(description))
-            .wrap(Wrap { trim: false });
+        let paragraph = Paragraph::new(Text::from(description)).wrap(Wrap { trim: false });
 
         let content_width = content_area.width;
         let total_lines = paragraph.line_count(content_width) as u16;
 
-        let mut scroll_view =
-            ScrollView::new(Size::new(content_width, total_lines));
-        scroll_view.render_widget(
-            paragraph,
-            Rect::new(0, 0, content_width, total_lines),
-        );
+        let mut scroll_view = ScrollView::new(Size::new(content_width, total_lines));
+        scroll_view.render_widget(paragraph, Rect::new(0, 0, content_width, total_lines));
         scroll_view.render(content_area, buf, state);
 
         // Bottom divider

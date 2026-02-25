@@ -8,7 +8,11 @@ use crate::{
     config::Config,
 };
 
-pub fn update(state: &mut CreateNoteModalState, config: &Config, msg: CreateNoteModalMsg) -> Vec<Cmd> {
+pub fn update(
+    state: &mut CreateNoteModalState,
+    config: &Config,
+    msg: CreateNoteModalMsg,
+) -> Vec<Cmd> {
     match msg {
         CreateNoteModalMsg::Open => {
             state.is_showing = true;
@@ -37,7 +41,10 @@ pub fn update(state: &mut CreateNoteModalState, config: &Config, msg: CreateNote
             }
             let name = state.input.clone();
             let slug = slugify!(&name);
-            let path: PathBuf = config.notes_dir.join("scratch").join(format!("{}.md", slug));
+            let path: PathBuf = config
+                .notes_dir
+                .join("scratch")
+                .join(format!("{}.md", slug));
             state.is_showing = false;
             vec![Cmd::OpenScratchNote { path, name }]
         }

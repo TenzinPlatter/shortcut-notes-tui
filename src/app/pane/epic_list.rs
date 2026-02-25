@@ -1,5 +1,5 @@
 use crossterm::event::{KeyCode, KeyEvent};
-use fuzzy_matcher::{FuzzyMatcher, skim::SkimMatcherV2};
+use fuzzy_matcher::{skim::SkimMatcherV2, FuzzyMatcher};
 
 use crate::{
     api::epic::EpicSlim,

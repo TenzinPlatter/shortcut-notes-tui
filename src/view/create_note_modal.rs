@@ -48,8 +48,8 @@ impl WidgetRef for CreateNoteModal<'_> {
         let input_line = Line::from(input_text);
         buf.set_line(chunks[2].x, chunks[2].y, &input_line, chunks[2].width);
 
-        let hint = Paragraph::new("Enter to create  Esc to cancel")
-            .style(Style::default().dark_gray());
+        let hint =
+            Paragraph::new("Enter to create  Esc to cancel").style(Style::default().dark_gray());
         hint.render(chunks[4], buf);
     }
 }

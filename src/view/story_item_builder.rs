@@ -39,7 +39,11 @@ impl<'a> StoryItemWidget<'a> {
 
     /// Calculate the total height including divider
     pub fn height(&self) -> u16 {
-        if self.is_last { 1 } else { 2 }
+        if self.is_last {
+            1
+        } else {
+            2
+        }
     }
 }
 

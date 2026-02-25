@@ -18,7 +18,12 @@ pub struct NavBar {
 }
 
 impl NavBar {
-    pub fn new(active_view: ViewType, loading: LoadingState, has_stories: bool, tick: usize) -> Self {
+    pub fn new(
+        active_view: ViewType,
+        loading: LoadingState,
+        has_stories: bool,
+        tick: usize,
+    ) -> Self {
         Self {
             active_view,
             loading,

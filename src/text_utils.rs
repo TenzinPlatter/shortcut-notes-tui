@@ -102,16 +102,34 @@ mod tests {
             // "one two three four five" at width 10, max 1 line
             // Should truncate and add "..."
             let result = truncate_to_lines("one two three four five", 10, 1);
-            assert!(result.ends_with("..."), "Expected ellipsis, got: {}", result);
-            assert!(count_wrapped_lines(&result, 10) <= 1, "Result should fit in 1 line");
+            assert!(
+                result.ends_with("..."),
+                "Expected ellipsis, got: {}",
+                result
+            );
+            assert!(
+                count_wrapped_lines(&result, 10) <= 1,
+                "Result should fit in 1 line"
+            );
         }
 
         #[test]
         fn truncation_respects_max_lines() {
             // Long text at width 10, max 2 lines
-            let result = truncate_to_lines("this is a very long text that should wrap to many lines", 10, 2);
-            assert!(result.ends_with("..."), "Expected ellipsis, got: {}", result);
-            assert!(count_wrapped_lines(&result, 10) <= 2, "Result should fit in 2 lines");
+            let result = truncate_to_lines(
+                "this is a very long text that should wrap to many lines",
+                10,
+                2,
+            );
+            assert!(
+                result.ends_with("..."),
+                "Expected ellipsis, got: {}",
+                result
+            );
+            assert!(
+                count_wrapped_lines(&result, 10) <= 2,
+                "Result should fit in 2 lines"
+            );
         }
     }
 }

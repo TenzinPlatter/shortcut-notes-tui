@@ -23,7 +23,11 @@ impl<'a> IterationListView<'a> {
         all_iterations: &'a [Iteration],
         state: &'a IterationListState,
     ) -> IterationListView<'a> {
-        IterationListView { active_iterations, all_iterations, state }
+        IterationListView {
+            active_iterations,
+            all_iterations,
+            state,
+        }
     }
 }
 
@@ -70,10 +74,10 @@ impl WidgetRef for IterationListView<'_> {
             .max(4); // minimum: border + empty message
 
         let section_chunks = Layout::vertical([
-            Constraint::Length(1),                    // "Active" header
-            Constraint::Length(active_list_height),   // Active LinearList
-            Constraint::Length(1),                    // "All" header
-            Constraint::Min(0),                       // All LinearList
+            Constraint::Length(1),                  // "Active" header
+            Constraint::Length(active_list_height), // Active LinearList
+            Constraint::Length(1),                  // "All" header
+            Constraint::Min(0),                     // All LinearList
         ])
         .split(content_area);
 
@@ -82,7 +86,11 @@ impl WidgetRef for IterationListView<'_> {
             .style(Style::new().dark_gray())
             .render(section_chunks[0], buf);
 
-        let active_empty_msg = if query.is_empty() { "No active iterations." } else { "No results." };
+        let active_empty_msg = if query.is_empty() {
+            "No active iterations."
+        } else {
+            "No results."
+        };
         LinearList::new(&active_visible, self.state.selected_id, active_empty_msg)
             .render_ref(section_chunks[1], buf);
 
@@ -90,7 +98,11 @@ impl WidgetRef for IterationListView<'_> {
             .style(Style::new().dark_gray())
             .render(section_chunks[2], buf);
 
-        let all_empty_msg = if query.is_empty() { "No other iterations." } else { "No results." };
+        let all_empty_msg = if query.is_empty() {
+            "No other iterations."
+        } else {
+            "No results."
+        };
         LinearList::new(&rest_visible, self.state.selected_id, all_empty_msg)
             .render_ref(section_chunks[3], buf);
     }

@@ -1,10 +1,4 @@
-use ratatui::{
-    buffer::Buffer,
-    layout::Rect,
-    style::Style,
-    text::Line,
-    widgets::Widget,
-};
+use ratatui::{buffer::Buffer, layout::Rect, style::Style, text::Line, widgets::Widget};
 
 /// Renders a single action menu item
 pub struct ActionItemWidget {

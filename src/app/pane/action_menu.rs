@@ -6,10 +6,10 @@ use ratatui::{
     text::Line,
     widgets::{Block, BorderType, Clear, Padding, StatefulWidget, Widget},
 };
-use tui_widget_list::{ListBuilder, ListView, ListState};
+use tui_widget_list::{ListBuilder, ListState, ListView};
 
 use crate::{
-    api::story::{Story, get_story_associated_iteration},
+    api::story::{get_story_associated_iteration, Story},
     app::{
         cmd::Cmd,
         model::{DataState, UiState},
@@ -178,11 +178,9 @@ pub fn update(
         ActionMenuMsg::Accept => {
             let mut actions = match ActionMenuItem::from_idx(state.selected.unwrap_or(0)) {
                 ActionMenuItem::OpenIterationNote => {
-                    let iteration = data_state
-                        .current_iterations_ref()
-                        .and_then(|iterations| {
-                            get_story_associated_iteration(story.iteration_id, iterations)
-                        });
+                    let iteration = data_state.current_iterations_ref().and_then(|iterations| {
+                        get_story_associated_iteration(story.iteration_id, iterations)
+                    });
 
                     match iteration {
                         Some(it) => vec![Cmd::OpenIterationNote {

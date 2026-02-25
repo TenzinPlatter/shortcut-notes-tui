@@ -7,7 +7,10 @@ use ratatui::{
 };
 use unicode_ellipsis::truncate_str;
 
-use crate::{dbg_file, text_utils::{count_wrapped_lines, truncate_to_lines}};
+use crate::{
+    dbg_file,
+    text_utils::{count_wrapped_lines, truncate_to_lines},
+};
 
 const ERROR_NOTIFICATION_WINDOW_MAX_WIDTH: u16 = 50;
 const ERROR_NOTIFICATION_MAX_TEXT_HEIGHT: u16 = 3;

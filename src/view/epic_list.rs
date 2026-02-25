@@ -46,7 +46,11 @@ impl WidgetRef for EpicListView<'_> {
             .into_iter()
             .cloned()
             .collect();
-        let empty_msg = if query.is_empty() { "No epics." } else { "No results." };
+        let empty_msg = if query.is_empty() {
+            "No epics."
+        } else {
+            "No results."
+        };
         LinearList::new(&visible, self.state.selected_id, empty_msg).render_ref(chunks[1], buf);
     }
 }

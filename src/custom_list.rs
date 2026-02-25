@@ -22,7 +22,11 @@ pub struct LinearList<'a, T: LinearListItem> {
 
 impl<'a, T: LinearListItem> LinearList<'a, T> {
     pub fn new(items: &'a [T], selected_id: Option<i32>, empty_message: &'a str) -> Self {
-        LinearList { items, selected_id, empty_message }
+        LinearList {
+            items,
+            selected_id,
+            empty_message,
+        }
     }
 }
 

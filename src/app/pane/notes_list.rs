@@ -35,7 +35,15 @@ fn scan_subdir(notes_dir: &Path, subdir: &str) -> Vec<PathBuf> {
 }
 
 /// Scans all note subdirectories and returns per-category vecs.
-pub fn scan_notes(notes_dir: &Path) -> (Vec<PathBuf>, Vec<PathBuf>, Vec<PathBuf>, Vec<PathBuf>, Vec<PathBuf>) {
+pub fn scan_notes(
+    notes_dir: &Path,
+) -> (
+    Vec<PathBuf>,
+    Vec<PathBuf>,
+    Vec<PathBuf>,
+    Vec<PathBuf>,
+    Vec<PathBuf>,
+) {
     let daily = scan_subdir(notes_dir, "daily");
     let stories = scan_subdir(notes_dir, "stories");
     let iterations = scan_subdir(notes_dir, "iterations");
@@ -101,9 +109,7 @@ pub fn update(state: &mut NotesListState, msg: NotesListMsg) -> Vec<Cmd> {
 
         NotesListMsg::OpenNote => {
             if let Some(ref path) = state.selected_path {
-                vec![Cmd::OpenDailyNote {
-                    path: path.clone(),
-                }]
+                vec![Cmd::OpenDailyNote { path: path.clone() }]
             } else {
                 vec![Cmd::None]
             }

@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use crossterm::event::{KeyCode, KeyEvent};
-use fuzzy_matcher::{FuzzyMatcher, skim::SkimMatcherV2};
+use fuzzy_matcher::{skim::SkimMatcherV2, FuzzyMatcher};
 
 use crate::{
     api::iteration::Iteration,
@@ -45,7 +45,11 @@ pub fn update(
 ) -> Vec<Cmd> {
     match msg {
         IterationListMsg::FocusNext => {
-            let visible = combined_visible(current_iterations, all_iterations, &state.search_query.clone());
+            let visible = combined_visible(
+                current_iterations,
+                all_iterations,
+                &state.search_query.clone(),
+            );
             if visible.is_empty() {
                 return vec![Cmd::None];
             }
@@ -64,7 +68,11 @@ pub fn update(
         }
 
         IterationListMsg::FocusPrev => {
-            let visible = combined_visible(current_iterations, all_iterations, &state.search_query.clone());
+            let visible = combined_visible(
+                current_iterations,
+                all_iterations,
+                &state.search_query.clone(),
+            );
             if visible.is_empty() {
                 return vec![Cmd::None];
             }
@@ -115,14 +123,22 @@ pub fn update(
         IterationListMsg::SearchInput(c) => {
             state.search_query.push(c);
             // Reset selection to first visible item after query changes
-            let visible = combined_visible(current_iterations, all_iterations, &state.search_query.clone());
+            let visible = combined_visible(
+                current_iterations,
+                all_iterations,
+                &state.search_query.clone(),
+            );
             state.selected_id = visible.first().map(|it| it.id);
             vec![Cmd::None]
         }
 
         IterationListMsg::SearchBackspace => {
             state.search_query.pop();
-            let visible = combined_visible(current_iterations, all_iterations, &state.search_query.clone());
+            let visible = combined_visible(
+                current_iterations,
+                all_iterations,
+                &state.search_query.clone(),
+            );
             if state.selected_id.is_none() {
                 state.selected_id = visible.first().map(|it| it.id);
             }
