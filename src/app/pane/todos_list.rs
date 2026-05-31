@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use chrono::NaiveDate;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use uuid::Uuid;
@@ -51,13 +53,62 @@ pub struct DaySection {
     pub todos: Vec<Todo>,
 }
 
-pub fn group_todos_by_section(todos: &[Todo], today: NaiveDate) -> Vec<DaySection> {
+/// Partition of todos by date-relative section. Empty buckets are `None` / empty
+/// so the view can decide what to render without filtering an `Vec` of variants.
+pub struct GroupedTodos {
+    pub overdue: Option<Vec<Todo>>,
+    pub today: Option<Vec<Todo>>,
+    pub tomorrow: Option<Vec<Todo>>,
+    pub future: BTreeMap<NaiveDate, Vec<Todo>>,
+    pub no_date: Option<Vec<Todo>>,
+}
+
+impl GroupedTodos {
+    /// Flatten into a `Vec<DaySection>` in display order, dropping empty sections.
+    /// Used by both the renderer and the section-index-based nav helpers.
+    pub fn ordered_sections(&self) -> Vec<DaySection> {
+        let mut out = Vec::new();
+        if let Some(todos) = &self.overdue {
+            out.push(DaySection {
+                kind: SectionKind::Overdue,
+                todos: todos.clone(),
+            });
+        }
+        if let Some(todos) = &self.today {
+            out.push(DaySection {
+                kind: SectionKind::Today,
+                todos: todos.clone(),
+            });
+        }
+        if let Some(todos) = &self.tomorrow {
+            out.push(DaySection {
+                kind: SectionKind::Tomorrow,
+                todos: todos.clone(),
+            });
+        }
+        for (d, todos) in &self.future {
+            out.push(DaySection {
+                kind: SectionKind::Future(*d),
+                todos: todos.clone(),
+            });
+        }
+        if let Some(todos) = &self.no_date {
+            out.push(DaySection {
+                kind: SectionKind::NoDate,
+                todos: todos.clone(),
+            });
+        }
+        out
+    }
+}
+
+pub fn group_todos_by_section(todos: &[Todo], today: NaiveDate) -> GroupedTodos {
     let tomorrow = today.succ_opt().expect("today + 1 day fits in NaiveDate");
 
     let mut overdue: Vec<Todo> = Vec::new();
     let mut today_section: Vec<Todo> = Vec::new();
     let mut tomorrow_section: Vec<Todo> = Vec::new();
-    let mut future: std::collections::BTreeMap<NaiveDate, Vec<Todo>> = Default::default();
+    let mut future: BTreeMap<NaiveDate, Vec<Todo>> = BTreeMap::new();
     let mut no_date: Vec<Todo> = Vec::new();
 
     for todo in todos {
@@ -70,39 +121,13 @@ pub fn group_todos_by_section(todos: &[Todo], today: NaiveDate) -> Vec<DaySectio
         }
     }
 
-    let mut out = Vec::new();
-    if !overdue.is_empty() {
-        out.push(DaySection {
-            kind: SectionKind::Overdue,
-            todos: overdue,
-        });
+    GroupedTodos {
+        overdue: (!overdue.is_empty()).then_some(overdue),
+        today: (!today_section.is_empty()).then_some(today_section),
+        tomorrow: (!tomorrow_section.is_empty()).then_some(tomorrow_section),
+        future,
+        no_date: (!no_date.is_empty()).then_some(no_date),
     }
-    if !today_section.is_empty() {
-        out.push(DaySection {
-            kind: SectionKind::Today,
-            todos: today_section,
-        });
-    }
-    if !tomorrow_section.is_empty() {
-        out.push(DaySection {
-            kind: SectionKind::Tomorrow,
-            todos: tomorrow_section,
-        });
-    }
-    for (d, todos) in future {
-        out.push(DaySection {
-            kind: SectionKind::Future(d),
-            todos,
-        });
-    }
-    if !no_date.is_empty() {
-        out.push(DaySection {
-            kind: SectionKind::NoDate,
-            todos: no_date,
-        });
-    }
-
-    out
 }
 
 fn find_todo_position(todo_id: Uuid, sections: &[DaySection]) -> Option<(usize, usize)> {
@@ -150,7 +175,7 @@ pub fn update(state: &mut TodosListState, todos: &mut Vec<Todo>, msg: TodosListM
             if todos.is_empty() {
                 return vec![Cmd::None];
             }
-            let sections = group_todos_by_section(todos, crate::time::today());
+            let sections = group_todos_by_section(todos, crate::time::today()).ordered_sections();
             if let Some(current_id) = state.selected_id {
                 state.selected_id = next_todo_id(current_id, &sections);
             } else {
@@ -163,7 +188,7 @@ pub fn update(state: &mut TodosListState, todos: &mut Vec<Todo>, msg: TodosListM
             if todos.is_empty() {
                 return vec![Cmd::None];
             }
-            let sections = group_todos_by_section(todos, crate::time::today());
+            let sections = group_todos_by_section(todos, crate::time::today()).ordered_sections();
             if let Some(current_id) = state.selected_id {
                 state.selected_id = prev_todo_id(current_id, &sections);
             } else {
@@ -183,7 +208,7 @@ pub fn update(state: &mut TodosListState, todos: &mut Vec<Todo>, msg: TodosListM
         }
 
         TodosListMsg::FocusSectionNext | TodosListMsg::FocusSectionPrev => {
-            let sections = group_todos_by_section(todos, crate::time::today());
+            let sections = group_todos_by_section(todos, crate::time::today()).ordered_sections();
             if sections.is_empty() {
                 return vec![Cmd::None];
             }
@@ -217,7 +242,7 @@ pub fn update(state: &mut TodosListState, todos: &mut Vec<Todo>, msg: TodosListM
                 return vec![Cmd::None];
             }
 
-            let sections = group_todos_by_section(todos, crate::time::today());
+            let sections = group_todos_by_section(todos, crate::time::today()).ordered_sections();
             let next_id = next_todo_id(id, &sections);
             let prev_id = prev_todo_id(id, &sections);
 
@@ -295,7 +320,14 @@ mod tests {
             manual_dated("tomorrow", tomorrow),
         ];
 
-        let sections = group_todos_by_section(&todos, today);
+        let grouped = group_todos_by_section(&todos, today);
+        assert!(grouped.overdue.is_some());
+        assert!(grouped.today.is_some());
+        assert!(grouped.tomorrow.is_some());
+        assert_eq!(grouped.future.len(), 1);
+        assert!(grouped.no_date.is_some());
+
+        let sections = grouped.ordered_sections();
         let kinds: Vec<_> = sections.iter().map(|s| s.kind.discriminant()).collect();
         assert_eq!(
             kinds,

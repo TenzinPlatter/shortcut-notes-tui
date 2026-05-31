@@ -50,7 +50,7 @@ impl WidgetRef for TodosListView<'_> {
         }
 
         let today = today();
-        let sections = group_todos_by_section(self.todos, today);
+        let sections = group_todos_by_section(self.todos, today).ordered_sections();
 
         // Calculate layout constraints for sections:
         // header (1) + bordered list (items*2 + 4 for border+padding) + spacing (1)
