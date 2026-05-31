@@ -131,11 +131,23 @@ async fn handle_event(
         .unwrap_or(&abs)
         .to_path_buf();
 
-    if removed {
+    let treat_as_removed = removed
+        || matches!(
+            std::fs::symlink_metadata(&abs),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound
+        );
+
+    if treat_as_removed {
         let _ = store::drop_file(&config.cache_dir, &rel).await?;
     } else {
         let content = match std::fs::read_to_string(&abs) {
             Ok(c) => c,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                // Raced with delete/rename — treat as removal.
+                let _ = store::drop_file(&config.cache_dir, &rel).await?;
+                rebuild_schedule(&config.cache_dir, sched).await?;
+                return Ok(());
+            }
             Err(e) => {
                 warn!("read {} failed: {e}", abs.display());
                 return Ok(());
