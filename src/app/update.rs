@@ -204,13 +204,12 @@ impl App {
             Msg::SwitchToView(view_type) => {
                 self.model.ui.active_view = view_type;
                 if view_type == ViewType::Notes {
-                    let (daily, stories, iterations, epics, scratch) =
-                        notes_list::scan_notes(&self.model.config.notes_dir);
-                    self.model.ui.notes_list.daily_notes = daily;
-                    self.model.ui.notes_list.story_notes = stories;
-                    self.model.ui.notes_list.iteration_notes = iterations;
-                    self.model.ui.notes_list.epic_notes = epics;
-                    self.model.ui.notes_list.scratch_notes = scratch;
+                    let scan = notes_list::scan_notes(&self.model.config.notes_dir);
+                    self.model.ui.notes_list.daily_notes = scan.daily;
+                    self.model.ui.notes_list.story_notes = scan.stories;
+                    self.model.ui.notes_list.iteration_notes = scan.iterations;
+                    self.model.ui.notes_list.epic_notes = scan.epics;
+                    self.model.ui.notes_list.scratch_notes = scan.scratch;
                     if self.model.ui.notes_list.selected_path.is_none() {
                         let nl = &self.model.ui.notes_list;
                         let first = nl.daily_notes.first()
@@ -227,13 +226,12 @@ impl App {
 
             Msg::NoteOpened => {
                 if self.model.ui.active_view == ViewType::Notes {
-                    let (daily, stories, iterations, epics, scratch) =
-                        notes_list::scan_notes(&self.model.config.notes_dir);
-                    self.model.ui.notes_list.daily_notes = daily;
-                    self.model.ui.notes_list.story_notes = stories;
-                    self.model.ui.notes_list.iteration_notes = iterations;
-                    self.model.ui.notes_list.epic_notes = epics;
-                    self.model.ui.notes_list.scratch_notes = scratch;
+                    let scan = notes_list::scan_notes(&self.model.config.notes_dir);
+                    self.model.ui.notes_list.daily_notes = scan.daily;
+                    self.model.ui.notes_list.story_notes = scan.stories;
+                    self.model.ui.notes_list.iteration_notes = scan.iterations;
+                    self.model.ui.notes_list.epic_notes = scan.epics;
+                    self.model.ui.notes_list.scratch_notes = scan.scratch;
                 }
                 vec![Cmd::None]
             }

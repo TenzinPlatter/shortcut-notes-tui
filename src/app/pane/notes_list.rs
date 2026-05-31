@@ -34,23 +34,24 @@ fn scan_subdir(notes_dir: &Path, subdir: &str) -> Vec<PathBuf> {
     notes
 }
 
-/// Per-category vecs returned by `scan_notes`: daily, stories, iterations, epics, scratch.
-type NotesScan = (
-    Vec<PathBuf>,
-    Vec<PathBuf>,
-    Vec<PathBuf>,
-    Vec<PathBuf>,
-    Vec<PathBuf>,
-);
+/// Per-category note paths returned by `scan_notes`.
+pub struct NotesScan {
+    pub daily: Vec<PathBuf>,
+    pub stories: Vec<PathBuf>,
+    pub iterations: Vec<PathBuf>,
+    pub epics: Vec<PathBuf>,
+    pub scratch: Vec<PathBuf>,
+}
 
-/// Scans all note subdirectories and returns per-category vecs.
+/// Scans all note subdirectories under `notes_dir`.
 pub fn scan_notes(notes_dir: &Path) -> NotesScan {
-    let daily = scan_subdir(notes_dir, "daily");
-    let stories = scan_subdir(notes_dir, "stories");
-    let iterations = scan_subdir(notes_dir, "iterations");
-    let epics = scan_subdir(notes_dir, "epics");
-    let scratch = scan_subdir(notes_dir, "scratch");
-    (daily, stories, iterations, epics, scratch)
+    NotesScan {
+        daily: scan_subdir(notes_dir, "daily"),
+        stories: scan_subdir(notes_dir, "stories"),
+        iterations: scan_subdir(notes_dir, "iterations"),
+        epics: scan_subdir(notes_dir, "epics"),
+        scratch: scan_subdir(notes_dir, "scratch"),
+    }
 }
 
 /// Fixed section order: 0=daily, 1=story, 2=iteration, 3=epic, 4=scratch.
