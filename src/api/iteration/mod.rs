@@ -1,32 +1,36 @@
 use anyhow::Context;
 use chrono::NaiveDate;
-use futures::future::{join_all, try_join_all};
+use futures::future::join_all;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    api::{
-        ApiClient,
-        story::{Story, StorySlim},
-    },
+    api::{ApiClient, story::Story},
     custom_list::LinearListItem,
     dbg_file,
 };
+
+#[derive(Deserialize)]
+struct IterationSearchResults {
+    data: Vec<Iteration>,
+    next: Option<String>,
+}
+
+#[derive(Deserialize, Serialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum IterationStatus {
+    Unstarted,
+    Started,
+    Done,
+}
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct Iteration {
     pub id: i32,
     pub name: String,
-    pub description: String,
     pub start_date: NaiveDate,
     pub end_date: NaiveDate,
     pub app_url: String,
-}
-
-#[derive(Deserialize)]
-pub struct IterationSlim {
-    id: i32,
-    start_date: NaiveDate,
-    end_date: NaiveDate,
+    pub status: IterationStatus,
 }
 
 impl LinearListItem for Iteration {
@@ -36,60 +40,56 @@ impl LinearListItem for Iteration {
 
 impl ApiClient {
     pub async fn get_current_iterations(&self) -> anyhow::Result<Vec<Iteration>> {
-        let response = self.get("iterations").await?;
-        let iterations_slim = response.json::<Vec<IterationSlim>>().await?;
-        let today = crate::time::today();
-        let current_iteration_ids: Vec<_> = iterations_slim
-            .iter()
-            .filter(|it| it.start_date <= today && it.end_date >= today)
-            .map(|it| it.id)
-            .collect();
+        let mut all = Vec::new();
+        let mut next_path: Option<String> = None;
 
-        let iterations = join_all(current_iteration_ids.iter().map(|id| async move {
-            let response = self.get(&format!("iterations/{id}")).await?;
-            // add the context to cast response to an anyhow error, but we will filter out errors
-            // so don't need a real message
-            response.json::<Iteration>().await.context("")
-        }))
-        .await
-        .into_iter()
-        .filter_map(|res| res.ok())
-        .collect();
+        loop {
+            let response = match &next_path {
+                None => {
+                    let params = [
+                        ("query", "is:started"),
+                        ("page_size", "250"),
+                        ("detail", "slim"),
+                    ];
+                    self.get_with_query("search/iterations", &params).await?
+                }
+                Some(path) => self.get_absolute_path(path).await?,
+            };
 
-        Ok(iterations)
+            let page: IterationSearchResults = response
+                .json()
+                .await
+                .context("Failed to parse search/iterations response")?;
+
+            all.extend(page.data);
+            match page.next {
+                Some(n) => next_path = Some(n),
+                None => break,
+            }
+        }
+
+        Ok(all)
     }
 
     pub async fn get_all_iterations(&self) -> anyhow::Result<Vec<Iteration>> {
         let response = self.get("iterations").await?;
-        let iterations_slim = response.json::<Vec<IterationSlim>>().await?;
-
-        let iterations = join_all(iterations_slim.iter().map(|slim| async move {
-            let response = self.get(&format!("iterations/{}", slim.id)).await?;
-            response.json::<Iteration>().await.context("")
-        }))
-        .await
-        .into_iter()
-        .filter_map(|res| res.ok())
-        .collect();
-
-        Ok(iterations)
+        Ok(response.json().await?)
     }
 
     pub async fn get_owned_iteration_stories(
         &self,
         iteration_ids: Vec<i32>,
     ) -> anyhow::Result<Vec<Story>> {
-        let iteration_stories = join_all(
-            iteration_ids
-                .iter()
-                .map(|id| async { self.get_owned_single_iteration_stories(*id).await }),
-        )
+        let iteration_stories = join_all(iteration_ids.iter().map(|id| async move {
+            let query = format!("iteration:{} owner:{}", id, self.mention_name);
+            self.search_stories_all_pages(&query).await
+        }))
         .await
         .into_iter()
         .filter_map(|res| match res {
             Ok(stories) => Some(stories),
             Err(e) => {
-                dbg_file!("Failed to fetch story with error: {}", e);
+                dbg_file!("Failed to fetch iteration stories with error: {}", e);
                 None
             }
         })
@@ -97,35 +97,5 @@ impl ApiClient {
         .collect();
 
         Ok(iteration_stories)
-    }
-
-    async fn get_owned_single_iteration_stories(
-        &self,
-        iteration_id: i32,
-    ) -> anyhow::Result<Vec<Story>> {
-        let response = self
-            .get(&format!("iterations/{}/stories", iteration_id))
-            .await?;
-        let stories_slim = response.json::<Vec<StorySlim>>().await?;
-        let slim_owned: Vec<_> = stories_slim
-            .iter()
-            .filter(|s| s.owner_ids.contains(&self.user_id))
-            .collect();
-
-        let stories = {
-            let len = slim_owned.len();
-            let futures = slim_owned.into_iter().take(len).map(|slim| async move {
-                let query = format!("stories/{}", slim.id);
-                let response = self.get(&query).await?;
-                response
-                    .json::<Story>()
-                    .await
-                    .context("Failed to parse as Story")
-            });
-
-            try_join_all(futures).await?
-        };
-
-        Ok(stories)
     }
 }

@@ -13,7 +13,7 @@ use crate::{
     config::Config,
     dummy,
     error::ErrorInfo,
-    get_user_id,
+    get_member_info,
 };
 
 impl App {
@@ -26,11 +26,17 @@ impl App {
         }
 
         let api_client = {
-            let user_id = get_user_id(cache.user_id, &config.api_token).await?;
-            ApiClient::new(config.api_token.to_owned(), user_id)
+            let (user_id, mention_name) = get_member_info(
+                cache.user_id,
+                cache.user_mention_name.clone(),
+                &config.api_token,
+            )
+            .await?;
+            ApiClient::new(config.api_token.to_owned(), user_id, mention_name)
         };
 
         cache.user_id = Some(api_client.user_id);
+        cache.user_mention_name = Some(api_client.mention_name.clone());
         cache.write().await?;
 
         let todos = crate::todos::load_todos(&config.cache_dir).await;
@@ -55,9 +61,15 @@ impl App {
 
     async fn init_with_dummy_data(config: Config, mut cache: Cache) -> Result<Self> {
         let dummy_user_id = Uuid::nil();
-        let api_client = ApiClient::new(config.api_token.to_owned(), dummy_user_id);
+        let dummy_mention_name = "dummy".to_string();
+        let api_client = ApiClient::new(
+            config.api_token.to_owned(),
+            dummy_user_id,
+            dummy_mention_name.clone(),
+        );
 
         cache.user_id = Some(dummy_user_id);
+        cache.user_mention_name = Some(dummy_mention_name);
 
         let (sender, receiver) = mpsc::unbounded_channel();
         let sender_clone = sender.clone();

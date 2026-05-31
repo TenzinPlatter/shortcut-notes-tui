@@ -7,7 +7,7 @@ use uuid::Uuid;
 use crate::{
     api::{
         story::{Story, get_story_associated_iteration},
-        user::get_user_id_from_api,
+        user::get_member_from_api,
     },
     app::{
         App,
@@ -47,14 +47,17 @@ macro_rules! no_active_story {
     };
 }
 
-pub async fn get_user_id(saved_user_id: Option<Uuid>, api_token: &str) -> anyhow::Result<Uuid> {
-    let id = if let Some(id) = saved_user_id {
-        id
-    } else {
-        get_user_id_from_api(api_token).await?
-    };
+pub async fn get_member_info(
+    saved_user_id: Option<Uuid>,
+    saved_mention_name: Option<String>,
+    api_token: &str,
+) -> anyhow::Result<(Uuid, String)> {
+    if let (Some(id), Some(name)) = (saved_user_id, saved_mention_name.as_ref()) {
+        return Ok((id, name.clone()));
+    }
 
-    Ok(id)
+    let member = get_member_from_api(api_token).await?;
+    Ok((member.id, member.profile.mention_name))
 }
 
 pub async fn run(terminal: &mut DefaultTerminal) -> anyhow::Result<()> {

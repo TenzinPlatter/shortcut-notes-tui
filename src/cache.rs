@@ -20,6 +20,8 @@ pub struct Cache {
     pub epics: Vec<EpicSlim>,
     pub active_story: Option<Story>,
     pub user_id: Option<Uuid>,
+    #[serde(default)]
+    pub user_mention_name: Option<String>,
     pub cache_dir: PathBuf,
 }
 
@@ -31,6 +33,7 @@ impl Default for Cache {
             iterations: Vec::new(),
             epics: Vec::new(),
             user_id: None,
+            user_mention_name: None,
             active_story: None,
             cache_dir: Self::default_cache_dir(),
         }

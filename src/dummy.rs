@@ -2,7 +2,10 @@
 
 use crate::time;
 
-use crate::api::{iteration::Iteration, story::Story};
+use crate::api::{
+    iteration::{Iteration, IterationStatus},
+    story::Story,
+};
 
 pub fn is_enabled() -> bool {
     std::env::var("DUMMY_DATA").is_ok_and(|val| val == "1")
@@ -13,10 +16,10 @@ pub fn iteration() -> Iteration {
     Iteration {
         id: -1,
         name: "Sprint 42".to_string(),
-        description: "The sprint where we answer everything".to_string(),
         start_date: today - chrono::Duration::days(7),
         end_date: today + chrono::Duration::days(7),
         app_url: "https://app.shortcut.com/example/iteration/1".to_string(),
+        status: IterationStatus::Started,
     }
 }
 
