@@ -21,6 +21,11 @@ pub async fn run(config: Config) -> Result<()> {
     init_tracing();
     info!("arc daemon starting; notes_dir={}", config.notes_dir.display());
 
+    if !config.notes_dir.exists() {
+        info!("notes_dir {} missing, creating", config.notes_dir.display());
+        std::fs::create_dir_all(&config.notes_dir)?;
+    }
+
     // Bootstrap: full scan.
     bootstrap_scan(&config.notes_dir, &config.cache_dir).await?;
 
