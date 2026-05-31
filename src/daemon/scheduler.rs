@@ -29,6 +29,90 @@ impl Notifier for DBusNotifier {
     }
 }
 
+use std::collections::HashMap;
+use std::sync::Arc;
+use uuid::Uuid;
+
+#[derive(Clone, Debug)]
+pub struct ScheduledTodo {
+    pub id: Uuid,
+    pub title: String,
+    pub body: String,
+    pub fire_at: DateTime<Local>,
+}
+
+pub struct Scheduler {
+    clock: Arc<dyn Clock>,
+    notifier: Arc<dyn Notifier>,
+    entries: HashMap<Uuid, ScheduledTodo>,
+    overdue_fired: bool,
+}
+
+impl Scheduler {
+    pub fn new(clock: Arc<dyn Clock>, notifier: Arc<dyn Notifier>) -> Self {
+        Self {
+            clock,
+            notifier,
+            entries: HashMap::new(),
+            overdue_fired: false,
+        }
+    }
+
+    pub fn upsert(&mut self, todo: ScheduledTodo) {
+        self.entries.insert(todo.id, todo);
+    }
+
+    pub fn cancel(&mut self, id: Uuid) {
+        self.entries.remove(&id);
+    }
+
+    /// Fire any due entries.
+    pub fn tick(&mut self) {
+        let now = self.clock.now();
+
+        // First tick: batch overdue (date strictly before now) into one notif.
+        if !self.overdue_fired {
+            let overdue_ids: Vec<Uuid> = self
+                .entries
+                .iter()
+                .filter(|(_, t)| t.fire_at < now)
+                .map(|(id, _)| *id)
+                .collect();
+
+            if !overdue_ids.is_empty() {
+                let n = overdue_ids.len();
+                self.notifier.notify(
+                    "arc — overdue todos",
+                    &format!("{} overdue todos. Check the arc TUI.", n),
+                );
+                for id in overdue_ids {
+                    self.entries.remove(&id);
+                }
+            }
+            self.overdue_fired = true;
+            return;
+        }
+
+        // Steady state: fire anything whose fire_at <= now and remove.
+        let due_ids: Vec<Uuid> = self
+            .entries
+            .iter()
+            .filter(|(_, t)| t.fire_at <= now)
+            .map(|(id, _)| *id)
+            .collect();
+        for id in due_ids {
+            if let Some(t) = self.entries.remove(&id) {
+                self.notifier.notify(&t.title, &t.body);
+            }
+        }
+    }
+
+    /// When the next fire would be — used by the runtime to decide how long to sleep.
+    pub fn next_fire(&self) -> Option<DateTime<Local>> {
+        self.entries.values().map(|t| t.fire_at).min()
+    }
+}
+
 #[cfg(test)]
 mod traits_tests {
     use super::*;
@@ -69,5 +153,111 @@ mod traits_tests {
             c.now(),
             Local.with_ymd_and_hms(2026, 5, 31, 10, 0, 0).unwrap()
         );
+    }
+}
+
+#[cfg(test)]
+mod heap_tests {
+    use super::traits_tests::{CapturingNotifier, FakeClock};
+    use super::*;
+    use chrono::TimeZone;
+    use std::sync::Arc;
+    use uuid::Uuid;
+
+    fn at_9am(year: i32, month: u32, day: u32) -> DateTime<Local> {
+        Local.with_ymd_and_hms(year, month, day, 9, 0, 0).unwrap()
+    }
+
+    #[test]
+    fn dated_todo_fires_at_9am_on_its_date() {
+        let clock = Arc::new(FakeClock::new(
+            Local.with_ymd_and_hms(2026, 5, 31, 8, 59, 0).unwrap(),
+        ));
+        let notifier = Arc::new(CapturingNotifier::default());
+        let mut sched = Scheduler::new(clock.clone(), notifier.clone());
+
+        sched.upsert(ScheduledTodo {
+            id: Uuid::nil(),
+            title: "Story sc-1".into(),
+            body: "ship it".into(),
+            fire_at: at_9am(2026, 5, 31),
+        });
+
+        sched.tick();
+        assert!(notifier.0.lock().unwrap().is_empty(), "not 9am yet");
+
+        clock.advance(chrono::Duration::minutes(2));
+        sched.tick();
+        let fired = notifier.0.lock().unwrap();
+        assert_eq!(fired.len(), 1);
+        assert_eq!(fired[0].0, "Story sc-1");
+        assert_eq!(fired[0].1, "ship it");
+    }
+
+    #[test]
+    fn overdue_batched_on_first_tick() {
+        let clock = Arc::new(FakeClock::new(
+            Local.with_ymd_and_hms(2026, 6, 5, 12, 0, 0).unwrap(),
+        ));
+        let notifier = Arc::new(CapturingNotifier::default());
+        let mut sched = Scheduler::new(clock.clone(), notifier.clone());
+
+        sched.upsert(ScheduledTodo {
+            id: Uuid::from_u128(1),
+            title: "t1".into(), body: "a".into(), fire_at: at_9am(2026, 6, 1),
+        });
+        sched.upsert(ScheduledTodo {
+            id: Uuid::from_u128(2),
+            title: "t2".into(), body: "b".into(), fire_at: at_9am(2026, 6, 2),
+        });
+        sched.upsert(ScheduledTodo {
+            id: Uuid::from_u128(3),
+            title: "t3".into(), body: "c".into(), fire_at: at_9am(2026, 6, 10),
+        });
+
+        sched.tick();
+        let fired = notifier.0.lock().unwrap();
+        assert_eq!(fired.len(), 1);
+        assert!(fired[0].1.contains("2 overdue todos"));
+    }
+
+    #[test]
+    fn upsert_replaces_existing_fire_time() {
+        let clock = Arc::new(FakeClock::new(
+            Local.with_ymd_and_hms(2026, 5, 31, 8, 0, 0).unwrap(),
+        ));
+        let notifier = Arc::new(CapturingNotifier::default());
+        let mut sched = Scheduler::new(clock.clone(), notifier.clone());
+
+        let id = Uuid::new_v4();
+        sched.upsert(ScheduledTodo {
+            id, title: "t".into(), body: "b".into(), fire_at: at_9am(2026, 5, 31),
+        });
+        // Reschedule to a later day.
+        sched.upsert(ScheduledTodo {
+            id, title: "t".into(), body: "b".into(), fire_at: at_9am(2026, 6, 30),
+        });
+
+        clock.advance(chrono::Duration::hours(2));
+        sched.tick();
+        assert!(notifier.0.lock().unwrap().is_empty(), "old fire time was cancelled");
+    }
+
+    #[test]
+    fn cancel_removes_entry() {
+        let clock = Arc::new(FakeClock::new(
+            Local.with_ymd_and_hms(2026, 5, 31, 8, 59, 0).unwrap(),
+        ));
+        let notifier = Arc::new(CapturingNotifier::default());
+        let mut sched = Scheduler::new(clock.clone(), notifier.clone());
+
+        let id = Uuid::new_v4();
+        sched.upsert(ScheduledTodo {
+            id, title: "t".into(), body: "b".into(), fire_at: at_9am(2026, 5, 31),
+        });
+        sched.cancel(id);
+        clock.advance(chrono::Duration::hours(2));
+        sched.tick();
+        assert!(notifier.0.lock().unwrap().is_empty());
     }
 }
