@@ -14,7 +14,7 @@ use crate::{
         cmd::{open_mux_session, open_note_in_editor},
     },
     cache::Cache,
-    cli::Commands,
+    cli::{Commands, DaemonCommands},
     config::Config,
     note::Note,
 };
@@ -151,6 +151,11 @@ pub async fn handle_command(
                 no_active_story!();
             }
         }
+
+        Commands::Daemon(daemon_cmd) => match daemon_cmd {
+            DaemonCommands::Run => crate::daemon::run(config.clone()).await,
+            DaemonCommands::Install => crate::daemon::install::install(),
+        },
 
         Commands::Migrate => unreachable!("Migrate is handled in main.rs before config is loaded"),
     }

@@ -28,4 +28,16 @@ pub enum Commands {
     /// Migrate config, cache, and notes directories from the old `shortcut-notes` name to `arc`.
     #[command()]
     Migrate,
+
+    /// Background daemon that parses todos out of notes.
+    #[command(subcommand)]
+    Daemon(DaemonCommands),
+}
+
+#[derive(Subcommand)]
+pub enum DaemonCommands {
+    /// Run the daemon in the foreground. Invoked by the systemd user unit.
+    Run,
+    /// Install + enable the systemd user unit for the daemon.
+    Install,
 }
