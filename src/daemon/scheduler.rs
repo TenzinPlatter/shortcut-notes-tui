@@ -1,4 +1,8 @@
+use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
+
 use chrono::{DateTime, Local};
+use uuid::Uuid;
 
 pub trait Clock: Send + Sync + 'static {
     fn now(&self) -> DateTime<Local>;
@@ -28,10 +32,6 @@ impl Notifier for DBusNotifier {
             .show();
     }
 }
-
-use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
-use uuid::Uuid;
 
 #[derive(Clone, Debug)]
 pub struct ScheduledTodo {

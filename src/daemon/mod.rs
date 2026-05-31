@@ -1,9 +1,3 @@
-pub mod install;
-pub mod scanner;
-pub mod scheduler;
-pub mod store;
-pub mod watcher;
-
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -16,6 +10,12 @@ use crate::config::Config;
 use crate::daemon::scheduler::{DBusNotifier, ScheduledTodo, Scheduler, SystemClock};
 use crate::daemon::watcher::WatchEvent;
 use crate::todos::TodoSource;
+
+pub mod install;
+pub mod scanner;
+pub mod scheduler;
+pub mod store;
+pub mod watcher;
 
 pub async fn run(config: Config) -> Result<()> {
     init_tracing();
