@@ -79,7 +79,6 @@ pub struct StoryListView<'a> {
     iterations: Option<&'a [Iteration]>,
     state: &'a StoryListState,
     active_story: Option<&'a Story>,
-    is_focused: bool,
     loading: LoadingState,
     tick: usize,
 }
@@ -90,7 +89,6 @@ impl<'a> StoryListView<'a> {
         iterations: Option<&'a [Iteration]>,
         state: &'a StoryListState,
         active_story: Option<&'a Story>,
-        is_focused: bool,
         loading: LoadingState,
         tick: usize,
     ) -> Self {
@@ -99,7 +97,6 @@ impl<'a> StoryListView<'a> {
             iterations,
             state,
             active_story,
-            is_focused,
             loading,
             tick,
         }

@@ -1,6 +1,5 @@
 use std::fs::read_to_string;
 use std::io::Write;
-use std::time::Instant;
 
 use anyhow::Result;
 use crossterm::ExecutableCommand;
@@ -14,7 +13,6 @@ use tempfile::NamedTempFile;
 use tokio::sync::mpsc;
 
 use crate::app::pane::action_menu::ActionMenu;
-use crate::dbg_file;
 use crate::error::{ERROR_NOTIFICATION_MAX_HEIGHT, ErrorInfo};
 use crate::view::add_todo_modal::AddTodoModal;
 use crate::view::create_note_modal::CreateNoteModal;
@@ -264,7 +262,6 @@ impl App {
                     self.model.data.current_iterations.as_deref(),
                     &self.model.ui.story_list,
                     self.model.data.active_story.as_ref(),
-                    true, // Always focused (single view)
                     self.model.ui.loading,
                     tick,
                 );

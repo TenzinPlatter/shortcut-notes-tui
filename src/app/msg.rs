@@ -3,6 +3,7 @@ use crossterm::event::KeyEvent;
 use crate::api::{epic::EpicSlim, iteration::Iteration, story::Story};
 use crate::app::model::ViewType;
 use crate::error::ErrorInfo;
+use crate::todos::Todo;
 
 #[derive(Debug, Clone)]
 pub enum Msg {
@@ -28,6 +29,7 @@ pub enum Msg {
     ToggleActionMenu,
     ToggleKeybindsPanel,
     CacheWritten,
+    TodosReloaded(Vec<Todo>),
     Error(ErrorInfo),
     Quit,
 }

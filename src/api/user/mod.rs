@@ -6,14 +6,9 @@ use uuid::Uuid;
 use crate::api::get_full_path;
 
 #[derive(Deserialize)]
-pub struct Profile {
-    pub mention_name: String,
-}
-
-#[derive(Deserialize)]
 pub struct Member {
     pub id: Uuid,
-    pub profile: Profile,
+    pub mention_name: String,
 }
 
 pub async fn get_member_from_api(api_token: &str) -> anyhow::Result<Member> {

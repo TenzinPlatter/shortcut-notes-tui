@@ -11,7 +11,7 @@ use tui_widget_list::{ListBuilder, ListState, ListView};
 use crate::{
     app::{
         model::TodosListState,
-        pane::todos_list::group_todos_by_date,
+        pane::todos_list::group_todos_by_section,
     },
     time::today,
     todos::Todo,
@@ -49,8 +49,8 @@ impl WidgetRef for TodosListView<'_> {
             return;
         }
 
-        let sections = group_todos_by_date(self.todos);
         let today = today();
+        let sections = group_todos_by_section(self.todos, today).ordered_sections();
 
         // Calculate layout constraints for sections:
         // header (1) + bordered list (items*2 + 4 for border+padding) + spacing (1)
@@ -74,11 +74,7 @@ impl WidgetRef for TodosListView<'_> {
             let header_area = section_areas[area_index];
             area_index += 1;
 
-            let header_text = if section.date == today {
-                "Today".to_string()
-            } else {
-                section.date.format("%a, %b %-d %Y").to_string()
-            };
+            let header_text = section.kind.header();
 
             let header_style = Style::default().fg(Color::DarkGray);
             let display = format!(" ── {} ──", header_text);
@@ -106,10 +102,21 @@ impl WidgetRef for TodosListView<'_> {
             let builder = ListBuilder::new(move |context| {
                 let todo = &section_todos[context.index];
                 let is_selected = selected_id.is_some_and(|id| id == todo.id);
+                let source_label = match &todo.source {
+                    crate::todos::TodoSource::NoteParsed { file, line, .. } => {
+                        let stem = file
+                            .file_stem()
+                            .and_then(|s| s.to_str())
+                            .unwrap_or("?");
+                        Some(format!(" [{}:{}]", stem, line))
+                    }
+                    crate::todos::TodoSource::Manual => None,
+                };
                 let widget = TodoItemWidget {
                     text: todo.text.clone(),
                     completed: todo.completed,
                     is_selected,
+                    source_label,
                 };
                 (widget, 2)
             });
@@ -135,6 +142,7 @@ struct TodoItemWidget {
     text: String,
     completed: bool,
     is_selected: bool,
+    source_label: Option<String>,
 }
 
 impl Widget for TodoItemWidget {
@@ -161,6 +169,13 @@ impl Widget for TodoItemWidget {
 
         spans.push(Span::styled(format!("{} ", checkbox), base_style));
         spans.push(Span::styled(self.text.clone(), name_style));
+
+        if let Some(label) = &self.source_label {
+            spans.push(Span::styled(
+                label.clone(),
+                Style::default().fg(Color::DarkGray),
+            ));
+        }
 
         let content = Line::from(spans);
         buf.set_line(area.x, area.y, &content, area.width);

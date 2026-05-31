@@ -150,7 +150,7 @@ impl App {
             }
 
             Msg::EpicsLoaded(mut epics) => {
-                epics.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+                epics.sort_by_key(|e| std::cmp::Reverse(e.created_at));
 
                 // Skip re-render if the ID set hasn't changed (same as StoriesLoaded)
                 if self.model.data.epics.len() == epics.len()
@@ -174,7 +174,7 @@ impl App {
             }
 
             Msg::IterationsLoaded(mut iterations) => {
-                iterations.sort_by(|a, b| b.start_date.cmp(&a.start_date));
+                iterations.sort_by_key(|it| std::cmp::Reverse(it.start_date));
                 if self.model.ui.iteration_list.selected_id.is_none() {
                     self.model.ui.iteration_list.selected_id = iterations.first().map(|it| it.id);
                 }
@@ -195,7 +195,7 @@ impl App {
             }
 
             Msg::AllIterationsLoaded(mut iterations) => {
-                iterations.sort_by(|a, b| b.start_date.cmp(&a.start_date));
+                iterations.sort_by_key(|it| std::cmp::Reverse(it.start_date));
                 self.model.data.iterations = iterations.clone();
                 self.model.cache.iterations = iterations;
                 vec![Cmd::WriteCache]
@@ -204,13 +204,12 @@ impl App {
             Msg::SwitchToView(view_type) => {
                 self.model.ui.active_view = view_type;
                 if view_type == ViewType::Notes {
-                    let (daily, stories, iterations, epics, scratch) =
-                        notes_list::scan_notes(&self.model.config.notes_dir);
-                    self.model.ui.notes_list.daily_notes = daily;
-                    self.model.ui.notes_list.story_notes = stories;
-                    self.model.ui.notes_list.iteration_notes = iterations;
-                    self.model.ui.notes_list.epic_notes = epics;
-                    self.model.ui.notes_list.scratch_notes = scratch;
+                    let scan = notes_list::scan_notes(&self.model.config.notes_dir);
+                    self.model.ui.notes_list.daily_notes = scan.daily;
+                    self.model.ui.notes_list.story_notes = scan.stories;
+                    self.model.ui.notes_list.iteration_notes = scan.iterations;
+                    self.model.ui.notes_list.epic_notes = scan.epics;
+                    self.model.ui.notes_list.scratch_notes = scan.scratch;
                     if self.model.ui.notes_list.selected_path.is_none() {
                         let nl = &self.model.ui.notes_list;
                         let first = nl.daily_notes.first()
@@ -227,18 +226,29 @@ impl App {
 
             Msg::NoteOpened => {
                 if self.model.ui.active_view == ViewType::Notes {
-                    let (daily, stories, iterations, epics, scratch) =
-                        notes_list::scan_notes(&self.model.config.notes_dir);
-                    self.model.ui.notes_list.daily_notes = daily;
-                    self.model.ui.notes_list.story_notes = stories;
-                    self.model.ui.notes_list.iteration_notes = iterations;
-                    self.model.ui.notes_list.epic_notes = epics;
-                    self.model.ui.notes_list.scratch_notes = scratch;
+                    let scan = notes_list::scan_notes(&self.model.config.notes_dir);
+                    self.model.ui.notes_list.daily_notes = scan.daily;
+                    self.model.ui.notes_list.story_notes = scan.stories;
+                    self.model.ui.notes_list.iteration_notes = scan.iterations;
+                    self.model.ui.notes_list.epic_notes = scan.epics;
+                    self.model.ui.notes_list.scratch_notes = scan.scratch;
                 }
                 vec![Cmd::None]
             }
 
             Msg::CacheWritten => vec![Cmd::None],
+
+            Msg::TodosReloaded(todos) => {
+                let prev_selected = self.model.ui.todos_list.selected_id;
+                self.model.data.todos = todos;
+                // Preserve selection if the UUID still exists; else clear it.
+                if let Some(id) = prev_selected
+                    && !self.model.data.todos.iter().any(|t| t.id == id)
+                {
+                    self.model.ui.todos_list.selected_id = None;
+                }
+                vec![Cmd::None]
+            }
 
             Msg::Error(e) => {
                 self.model.ui.errors.push(e);

@@ -34,6 +34,12 @@ tui-scrollview = "0.6"
 tui-widget-list = "0.15"
 open = "5.3.3"
 fuzzy-matcher = "0.3"
+fs2 = "0.4"
+notify = "8"
+notify-rust = "4"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+regex = "1"
 
 [profile.release]
 opt-level = "s"

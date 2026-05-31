@@ -44,6 +44,12 @@ impl App {
         let (sender, receiver) = mpsc::unbounded_channel();
         let sender_clone = sender.clone();
 
+        spawn_todos_watcher(
+            config.cache_dir.clone(),
+            sender.clone(),
+            tokio::runtime::Handle::current(),
+        );
+
         let mut model = Model::from_cache_and_config(cache, config.clone(), todos);
 
         let handles = fetch_info_from_api(api_client.clone(), sender).await;
@@ -166,3 +172,51 @@ async fn fetch_info_from_api(api_client: ApiClient, sender: UnboundedSender<Msg>
     vec![current_iteration_handle, epics_handle, all_iterations_handle]
 }
 
+fn spawn_todos_watcher(
+    cache_dir: std::path::PathBuf,
+    sender: UnboundedSender<Msg>,
+    handle: tokio::runtime::Handle,
+) {
+    use notify::{EventKind, RecursiveMode, Watcher};
+    use std::sync::mpsc as std_mpsc;
+
+    std::thread::spawn(move || {
+        let (tx, rx) = std_mpsc::channel();
+        let mut watcher = match notify::recommended_watcher(tx) {
+            Ok(w) => w,
+            Err(_) => return,
+        };
+        let path = cache_dir.join("todos.json");
+        // Watch the cache_dir (not the file) — the file may not exist yet,
+        // and atomic-rename writes replace the inode.
+        let _ = watcher.watch(&cache_dir, RecursiveMode::NonRecursive);
+
+        let mut last_emit = std::time::Instant::now()
+            .checked_sub(std::time::Duration::from_secs(1))
+            .unwrap_or_else(std::time::Instant::now);
+
+        for ev in rx.iter().flatten() {
+            if !ev.paths.iter().any(|p| p == &path) {
+                continue;
+            }
+            if !matches!(
+                ev.kind,
+                EventKind::Modify(_) | EventKind::Create(_)
+            ) {
+                continue;
+            }
+            // Debounce: at most one reload per 200ms.
+            if last_emit.elapsed() < std::time::Duration::from_millis(200) {
+                continue;
+            }
+            last_emit = std::time::Instant::now();
+
+            let cache_dir = cache_dir.clone();
+            let sender = sender.clone();
+            handle.spawn(async move {
+                let todos = crate::todos::load_todos(&cache_dir).await;
+                let _ = sender.send(Msg::TodosReloaded(todos));
+            });
+        }
+    });
+}

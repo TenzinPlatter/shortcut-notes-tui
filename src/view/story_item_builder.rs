@@ -54,8 +54,6 @@ impl Widget for StoryItemWidget<'_> {
         if area.height >= 2 {
             let divider_style = if self.is_selected {
                 Style::default().fg(Color::Yellow)
-            } else if self.is_completed {
-                Style::default().dark_gray()
             } else {
                 Style::default().dark_gray()
             };

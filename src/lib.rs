@@ -14,7 +14,7 @@ use crate::{
         cmd::{open_mux_session, open_note_in_editor},
     },
     cache::Cache,
-    cli::Commands,
+    cli::{Commands, DaemonCommands},
     config::Config,
     note::Note,
 };
@@ -25,6 +25,7 @@ pub mod cache;
 pub mod cli;
 pub mod config;
 pub mod custom_list;
+pub mod daemon;
 pub mod dummy;
 pub mod error;
 pub mod keybindings;
@@ -57,7 +58,7 @@ pub async fn get_member_info(
     }
 
     let member = get_member_from_api(api_token).await?;
-    Ok((member.id, member.profile.mention_name))
+    Ok((member.id, member.mention_name))
 }
 
 pub async fn run(terminal: &mut DefaultTerminal) -> anyhow::Result<()> {
@@ -150,6 +151,11 @@ pub async fn handle_command(
                 no_active_story!();
             }
         }
+
+        Commands::Daemon(daemon_cmd) => match daemon_cmd {
+            DaemonCommands::Run => crate::daemon::run(config.clone()).await,
+            DaemonCommands::Install => crate::daemon::install::install(),
+        },
 
         Commands::Migrate => unreachable!("Migrate is handled in main.rs before config is loaded"),
     }
