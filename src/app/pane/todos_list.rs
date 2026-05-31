@@ -72,19 +72,34 @@ pub fn group_todos_by_section(todos: &[Todo], today: NaiveDate) -> Vec<DaySectio
 
     let mut out = Vec::new();
     if !overdue.is_empty() {
-        out.push(DaySection { kind: SectionKind::Overdue, todos: overdue });
+        out.push(DaySection {
+            kind: SectionKind::Overdue,
+            todos: overdue,
+        });
     }
     if !today_section.is_empty() {
-        out.push(DaySection { kind: SectionKind::Today, todos: today_section });
+        out.push(DaySection {
+            kind: SectionKind::Today,
+            todos: today_section,
+        });
     }
     if !tomorrow_section.is_empty() {
-        out.push(DaySection { kind: SectionKind::Tomorrow, todos: tomorrow_section });
+        out.push(DaySection {
+            kind: SectionKind::Tomorrow,
+            todos: tomorrow_section,
+        });
     }
     for (d, todos) in future {
-        out.push(DaySection { kind: SectionKind::Future(d), todos });
+        out.push(DaySection {
+            kind: SectionKind::Future(d),
+            todos,
+        });
     }
     if !no_date.is_empty() {
-        out.push(DaySection { kind: SectionKind::NoDate, todos: no_date });
+        out.push(DaySection {
+            kind: SectionKind::NoDate,
+            todos: no_date,
+        });
     }
 
     out
@@ -129,11 +144,7 @@ fn prev_todo_id(current_id: Uuid, sections: &[DaySection]) -> Option<Uuid> {
     sections.last()?.todos.last().map(|t| t.id)
 }
 
-pub fn update(
-    state: &mut TodosListState,
-    todos: &mut Vec<Todo>,
-    msg: TodosListMsg,
-) -> Vec<Cmd> {
+pub fn update(state: &mut TodosListState, todos: &mut Vec<Todo>, msg: TodosListMsg) -> Vec<Cmd> {
     match msg {
         TodosListMsg::FocusNext => {
             if todos.is_empty() {
@@ -162,11 +173,12 @@ pub fn update(
         }
 
         TodosListMsg::ToggleComplete => {
-            if let Some(id) = state.selected_id {
-                if let Some(todo) = todos.iter_mut().find(|t| t.id == id) {
-                    todo.completed = !todo.completed;
-                }
+            if let Some(id) = state.selected_id
+                && let Some(todo) = todos.iter_mut().find(|t| t.id == id)
+            {
+                todo.completed = !todo.completed;
             }
+
             vec![Cmd::WriteTodos]
         }
 

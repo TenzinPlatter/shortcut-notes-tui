@@ -101,7 +101,7 @@ pub async fn save_todos(cache_dir: &Path, todos: &[Todo]) -> anyhow::Result<()> 
     tokio::task::spawn_blocking(move || {
         let lock = open_lock(&cache_dir)?;
         FileExt::lock_exclusive(&lock)?;
-        let result: anyhow::Result<()> = (|| write_todos_inner(&cache_dir, &todos))();
+        let result = write_todos_inner(&cache_dir, &todos);
         let _ = FileExt::unlock(&lock);
         result
     })

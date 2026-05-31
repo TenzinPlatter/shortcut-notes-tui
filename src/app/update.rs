@@ -150,7 +150,7 @@ impl App {
             }
 
             Msg::EpicsLoaded(mut epics) => {
-                epics.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+                epics.sort_by_key(|e| std::cmp::Reverse(e.created_at));
 
                 // Skip re-render if the ID set hasn't changed (same as StoriesLoaded)
                 if self.model.data.epics.len() == epics.len()
@@ -174,7 +174,7 @@ impl App {
             }
 
             Msg::IterationsLoaded(mut iterations) => {
-                iterations.sort_by(|a, b| b.start_date.cmp(&a.start_date));
+                iterations.sort_by_key(|it| std::cmp::Reverse(it.start_date));
                 if self.model.ui.iteration_list.selected_id.is_none() {
                     self.model.ui.iteration_list.selected_id = iterations.first().map(|it| it.id);
                 }
@@ -195,7 +195,7 @@ impl App {
             }
 
             Msg::AllIterationsLoaded(mut iterations) => {
-                iterations.sort_by(|a, b| b.start_date.cmp(&a.start_date));
+                iterations.sort_by_key(|it| std::cmp::Reverse(it.start_date));
                 self.model.data.iterations = iterations.clone();
                 self.model.cache.iterations = iterations;
                 vec![Cmd::WriteCache]

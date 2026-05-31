@@ -143,7 +143,7 @@ mod traits_tests {
         }
         pub fn advance(&self, by: chrono::Duration) {
             let mut g = self.0.lock().unwrap();
-            *g = *g + by;
+            *g += by;
         }
     }
 

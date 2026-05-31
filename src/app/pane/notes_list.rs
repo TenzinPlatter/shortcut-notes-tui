@@ -34,16 +34,17 @@ fn scan_subdir(notes_dir: &Path, subdir: &str) -> Vec<PathBuf> {
     notes
 }
 
+/// Per-category vecs returned by `scan_notes`: daily, stories, iterations, epics, scratch.
+type NotesScan = (
+    Vec<PathBuf>,
+    Vec<PathBuf>,
+    Vec<PathBuf>,
+    Vec<PathBuf>,
+    Vec<PathBuf>,
+);
+
 /// Scans all note subdirectories and returns per-category vecs.
-pub fn scan_notes(
-    notes_dir: &Path,
-) -> (
-    Vec<PathBuf>,
-    Vec<PathBuf>,
-    Vec<PathBuf>,
-    Vec<PathBuf>,
-    Vec<PathBuf>,
-) {
+pub fn scan_notes(notes_dir: &Path) -> NotesScan {
     let daily = scan_subdir(notes_dir, "daily");
     let stories = scan_subdir(notes_dir, "stories");
     let iterations = scan_subdir(notes_dir, "iterations");
@@ -135,10 +136,10 @@ pub fn update(state: &mut NotesListState, msg: NotesListMsg) -> Vec<Cmd> {
             }
 
             // Save current selection for current section
-            if let Some(ref sel) = state.selected_path.clone() {
-                if let Some(cur_idx) = section_of(state, sel) {
-                    state.section_selections.insert(cur_idx, sel.clone());
-                }
+            if let Some(ref sel) = state.selected_path.clone()
+                && let Some(cur_idx) = section_of(state, sel)
+            {
+                state.section_selections.insert(cur_idx, sel.clone());
             }
 
             // Find current section index within non_empty list
