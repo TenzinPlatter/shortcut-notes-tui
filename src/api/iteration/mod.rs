@@ -12,21 +12,22 @@ use crate::{
     dbg_file,
 };
 
+#[derive(Deserialize, Serialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum IterationStatus {
+    Unstarted,
+    Started,
+    Done,
+}
+
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct Iteration {
     pub id: i32,
     pub name: String,
-    pub description: String,
     pub start_date: NaiveDate,
     pub end_date: NaiveDate,
     pub app_url: String,
-}
-
-#[derive(Deserialize)]
-pub struct IterationSlim {
-    id: i32,
-    start_date: NaiveDate,
-    end_date: NaiveDate,
+    pub status: IterationStatus,
 }
 
 impl LinearListItem for Iteration {
@@ -37,42 +38,16 @@ impl LinearListItem for Iteration {
 impl ApiClient {
     pub async fn get_current_iterations(&self) -> anyhow::Result<Vec<Iteration>> {
         let response = self.get("iterations").await?;
-        let iterations_slim = response.json::<Vec<IterationSlim>>().await?;
-        let today = crate::time::today();
-        let current_iteration_ids: Vec<_> = iterations_slim
-            .iter()
-            .filter(|it| it.start_date <= today && it.end_date >= today)
-            .map(|it| it.id)
-            .collect();
-
-        let iterations = join_all(current_iteration_ids.iter().map(|id| async move {
-            let response = self.get(&format!("iterations/{id}")).await?;
-            // add the context to cast response to an anyhow error, but we will filter out errors
-            // so don't need a real message
-            response.json::<Iteration>().await.context("")
-        }))
-        .await
-        .into_iter()
-        .filter_map(|res| res.ok())
-        .collect();
-
-        Ok(iterations)
+        let iterations: Vec<Iteration> = response.json().await?;
+        Ok(iterations
+            .into_iter()
+            .filter(|it| it.status == IterationStatus::Started)
+            .collect())
     }
 
     pub async fn get_all_iterations(&self) -> anyhow::Result<Vec<Iteration>> {
         let response = self.get("iterations").await?;
-        let iterations_slim = response.json::<Vec<IterationSlim>>().await?;
-
-        let iterations = join_all(iterations_slim.iter().map(|slim| async move {
-            let response = self.get(&format!("iterations/{}", slim.id)).await?;
-            response.json::<Iteration>().await.context("")
-        }))
-        .await
-        .into_iter()
-        .filter_map(|res| res.ok())
-        .collect();
-
-        Ok(iterations)
+        Ok(response.json().await?)
     }
 
     pub async fn get_owned_iteration_stories(
