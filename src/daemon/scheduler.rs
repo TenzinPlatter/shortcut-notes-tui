@@ -29,7 +29,7 @@ impl Notifier for DBusNotifier {
     }
 }
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -45,6 +45,7 @@ pub struct Scheduler {
     clock: Arc<dyn Clock>,
     notifier: Arc<dyn Notifier>,
     entries: HashMap<Uuid, ScheduledTodo>,
+    fired_ids: HashSet<Uuid>,
     overdue_fired: bool,
 }
 
@@ -54,20 +55,28 @@ impl Scheduler {
             clock,
             notifier,
             entries: HashMap::new(),
+            fired_ids: HashSet::new(),
             overdue_fired: false,
         }
     }
 
     pub fn upsert(&mut self, todo: ScheduledTodo) {
+        // Don't re-schedule a todo that already fired this run.
+        if self.fired_ids.contains(&todo.id) {
+            return;
+        }
         self.entries.insert(todo.id, todo);
     }
 
     pub fn cancel(&mut self, id: Uuid) {
         self.entries.remove(&id);
+        // Also forget that it ever fired, so a fresh entry can fire again.
+        self.fired_ids.remove(&id);
     }
 
-    /// Remove all scheduled entries. Preserves the `overdue_fired` flag
-    /// so calling `clear` mid-lifecycle does not re-batch overdue todos.
+    /// Remove all scheduled entries. Preserves the `overdue_fired` and
+    /// `fired_ids` state so `clear` + rebuild does not re-fire what was
+    /// already notified.
     pub fn clear(&mut self) {
         self.entries.clear();
     }
@@ -93,6 +102,7 @@ impl Scheduler {
                 );
                 for id in overdue_ids {
                     self.entries.remove(&id);
+                    self.fired_ids.insert(id);
                 }
             }
             self.overdue_fired = true;
@@ -109,6 +119,7 @@ impl Scheduler {
         for id in due_ids {
             if let Some(t) = self.entries.remove(&id) {
                 self.notifier.notify(&t.title, &t.body);
+                self.fired_ids.insert(id);
             }
         }
     }
@@ -265,5 +276,35 @@ mod heap_tests {
         clock.advance(chrono::Duration::hours(2));
         sched.tick();
         assert!(notifier.0.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn fired_overdue_does_not_refire_after_clear() {
+        let clock = Arc::new(FakeClock::new(
+            Local.with_ymd_and_hms(2026, 6, 5, 12, 0, 0).unwrap(),
+        ));
+        let notifier = Arc::new(CapturingNotifier::default());
+        let mut sched = Scheduler::new(clock.clone(), notifier.clone());
+
+        let id = Uuid::from_u128(1);
+        sched.upsert(ScheduledTodo {
+            id,
+            title: "t".into(),
+            body: "b".into(),
+            fire_at: at_9am(2026, 6, 1),
+        });
+        sched.tick();
+        assert_eq!(notifier.0.lock().unwrap().len(), 1, "batched overdue");
+
+        // Simulate rebuild_schedule clearing and re-inserting.
+        sched.clear();
+        sched.upsert(ScheduledTodo {
+            id,
+            title: "t".into(),
+            body: "b".into(),
+            fire_at: at_9am(2026, 6, 1),
+        });
+        sched.tick();
+        assert_eq!(notifier.0.lock().unwrap().len(), 1, "did not re-fire");
     }
 }
