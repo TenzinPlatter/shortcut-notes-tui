@@ -102,10 +102,21 @@ impl WidgetRef for TodosListView<'_> {
             let builder = ListBuilder::new(move |context| {
                 let todo = &section_todos[context.index];
                 let is_selected = selected_id.is_some_and(|id| id == todo.id);
+                let source_label = match &todo.source {
+                    crate::todos::TodoSource::NoteParsed { file, line, .. } => {
+                        let stem = file
+                            .file_stem()
+                            .and_then(|s| s.to_str())
+                            .unwrap_or("?");
+                        Some(format!(" [{}:{}]", stem, line))
+                    }
+                    crate::todos::TodoSource::Manual => None,
+                };
                 let widget = TodoItemWidget {
                     text: todo.text.clone(),
                     completed: todo.completed,
                     is_selected,
+                    source_label,
                 };
                 (widget, 2)
             });
@@ -131,6 +142,7 @@ struct TodoItemWidget {
     text: String,
     completed: bool,
     is_selected: bool,
+    source_label: Option<String>,
 }
 
 impl Widget for TodoItemWidget {
@@ -157,6 +169,13 @@ impl Widget for TodoItemWidget {
 
         spans.push(Span::styled(format!("{} ", checkbox), base_style));
         spans.push(Span::styled(self.text.clone(), name_style));
+
+        if let Some(label) = &self.source_label {
+            spans.push(Span::styled(
+                label.clone(),
+                Style::default().fg(Color::DarkGray),
+            ));
+        }
 
         let content = Line::from(spans);
         buf.set_line(area.x, area.y, &content, area.width);
