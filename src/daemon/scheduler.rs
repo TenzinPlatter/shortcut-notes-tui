@@ -66,6 +66,12 @@ impl Scheduler {
         self.entries.remove(&id);
     }
 
+    /// Remove all scheduled entries. Preserves the `overdue_fired` flag
+    /// so calling `clear` mid-lifecycle does not re-batch overdue todos.
+    pub fn clear(&mut self) {
+        self.entries.clear();
+    }
+
     /// Fire any due entries.
     pub fn tick(&mut self) {
         let now = self.clock.now();

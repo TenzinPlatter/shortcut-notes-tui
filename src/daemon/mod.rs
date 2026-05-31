@@ -7,7 +7,7 @@ pub mod watcher;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use chrono::{Datelike, Local, TimeZone};
 use tokio::sync::mpsc;
 use tracing::{error, info, warn};
@@ -78,8 +78,13 @@ async fn bootstrap_scan(notes_dir: &Path, cache_dir: &Path) -> Result<()> {
     info!("bootstrap: scanning {} note files", files.len());
     for abs in files {
         let rel = abs.strip_prefix(notes_dir).unwrap_or(&abs).to_path_buf();
-        let content = std::fs::read_to_string(&abs)
-            .with_context(|| format!("read {}", abs.display()))?;
+        let content = match std::fs::read_to_string(&abs) {
+            Ok(c) => c,
+            Err(e) => {
+                warn!("bootstrap read {} failed: {e}", abs.display());
+                continue;
+            }
+        };
         let parsed = scanner::parse_note(&content, &rel);
         if let Err(e) = store::merge_file(cache_dir, &rel, parsed).await {
             warn!("merge {} failed: {e:#}", rel.display());
@@ -146,10 +151,7 @@ async fn handle_event(
 async fn rebuild_schedule(cache_dir: &Path, sched: &mut Scheduler) -> Result<()> {
     let todos = crate::todos::load_todos(cache_dir).await;
     // Cancel everything we know about, then re-insert.
-    let ids: Vec<uuid::Uuid> = todos.iter().map(|t| t.id).collect();
-    for id in &ids {
-        sched.cancel(*id);
-    }
+    sched.clear();
     for t in todos {
         if t.completed {
             continue;
