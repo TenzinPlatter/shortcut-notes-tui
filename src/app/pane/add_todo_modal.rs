@@ -38,7 +38,7 @@ pub fn update(
             }
             let text = state.input.clone();
             let today = crate::time::today();
-            todos.push(Todo::new(text, today));
+            todos.push(Todo::new_manual(text, today));
             state.is_showing = false;
             state.input.clear();
             vec![Cmd::WriteTodos]

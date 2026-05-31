@@ -19,7 +19,9 @@ pub struct DaySection {
 pub fn group_todos_by_date(todos: &[Todo]) -> Vec<DaySection> {
     let mut map: BTreeMap<NaiveDate, Vec<Todo>> = BTreeMap::new();
     for todo in todos {
-        map.entry(todo.date).or_default().push(todo.clone());
+        if let Some(date) = todo.date {
+            map.entry(date).or_default().push(todo.clone());
+        }
     }
     map.into_iter()
         .rev()
