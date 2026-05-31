@@ -193,24 +193,34 @@ pub fn update(
         }
 
         TodosListMsg::DeleteSelected => {
-            if let Some(id) = state.selected_id {
-                let sections = group_todos_by_section(todos, crate::time::today());
-                let next_id = next_todo_id(id, &sections);
-                let prev_id = prev_todo_id(id, &sections);
+            let Some(id) = state.selected_id else {
+                return vec![Cmd::None];
+            };
+            // Don't allow deleting note-sourced todos via the TUI.
+            let is_note_parsed = todos
+                .iter()
+                .find(|t| t.id == id)
+                .is_some_and(|t| matches!(t.source, crate::todos::TodoSource::NoteParsed { .. }));
+            if is_note_parsed {
+                return vec![Cmd::None];
+            }
 
-                todos.retain(|t| t.id != id);
+            let sections = group_todos_by_section(todos, crate::time::today());
+            let next_id = next_todo_id(id, &sections);
+            let prev_id = prev_todo_id(id, &sections);
 
-                if let Some(next) = next_id
-                    && todos.iter().any(|t| t.id == next)
-                {
-                    state.selected_id = Some(next);
-                } else if let Some(prev) = prev_id
-                    && todos.iter().any(|t| t.id == prev)
-                {
-                    state.selected_id = Some(prev);
-                } else {
-                    state.selected_id = todos.first().map(|t| t.id);
-                }
+            todos.retain(|t| t.id != id);
+
+            if let Some(next) = next_id
+                && todos.iter().any(|t| t.id == next)
+            {
+                state.selected_id = Some(next);
+            } else if let Some(prev) = prev_id
+                && todos.iter().any(|t| t.id == prev)
+            {
+                state.selected_id = Some(prev);
+            } else {
+                state.selected_id = todos.first().map(|t| t.id);
             }
             vec![Cmd::WriteTodos]
         }
