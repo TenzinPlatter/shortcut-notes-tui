@@ -1,7 +1,6 @@
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use slugify::slugify;
-use uuid::Uuid;
 
 use crate::api::{ApiClient, branch::Branch, iteration::Iteration, story::comment::StoryComment};
 
@@ -21,38 +20,50 @@ pub struct Story {
 }
 
 #[derive(Deserialize)]
-pub struct StorySlim {
-    pub id: i32,
-    pub owner_ids: Vec<Uuid>,
+struct StorySearchResults {
+    data: Vec<Story>,
+    next: Option<String>,
 }
 
 impl ApiClient {
     pub async fn get_active_owned_stories(&self) -> anyhow::Result<Vec<Story>> {
-        let body = serde_json::json!({
-            "archived": false,
-            "owner_ids": [self.user_id],
-        });
+        let query = format!("owner:{} !is:archived", self.mention_name);
+        self.search_stories_all_pages(&query).await
+    }
 
-        let stories_slim = {
-            let response = self.post_with_body("stories/search", &body).await?;
-            response
-                .json::<Vec<StorySlim>>()
+    pub(crate) async fn search_stories_all_pages(
+        &self,
+        query: &str,
+    ) -> anyhow::Result<Vec<Story>> {
+        let mut all = Vec::new();
+        let mut next_path: Option<String> = None;
+
+        loop {
+            let response = match &next_path {
+                None => {
+                    let params = [
+                        ("query", query),
+                        ("page_size", "250"),
+                        ("detail", "full"),
+                    ];
+                    self.get_with_query("search/stories", &params).await?
+                }
+                Some(path) => self.get_absolute_path(path).await?,
+            };
+
+            let page: StorySearchResults = response
+                .json()
                 .await
-                .context("Failed to fetch owned stories from API")?
-        };
+                .context("Failed to parse search/stories response")?;
 
-        let stories = {
-            let mut stories = Vec::with_capacity(stories_slim.len());
-            for slim in stories_slim.into_iter() {
-                let query = format!("stories/{}", slim.id);
-                let response = self.get(&query).await?;
-                let story = response.json::<Story>().await?;
-                stories.push(story);
+            all.extend(page.data);
+            match page.next {
+                Some(n) => next_path = Some(n),
+                None => break,
             }
-            stories
-        };
+        }
 
-        Ok(stories)
+        Ok(all)
     }
 
     pub async fn update_story_description(

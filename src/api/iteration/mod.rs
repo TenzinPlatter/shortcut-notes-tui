@@ -1,13 +1,9 @@
-use anyhow::Context;
 use chrono::NaiveDate;
-use futures::future::{join_all, try_join_all};
+use futures::future::join_all;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    api::{
-        ApiClient,
-        story::{Story, StorySlim},
-    },
+    api::{ApiClient, story::Story},
     custom_list::LinearListItem,
     dbg_file,
 };
@@ -54,17 +50,16 @@ impl ApiClient {
         &self,
         iteration_ids: Vec<i32>,
     ) -> anyhow::Result<Vec<Story>> {
-        let iteration_stories = join_all(
-            iteration_ids
-                .iter()
-                .map(|id| async { self.get_owned_single_iteration_stories(*id).await }),
-        )
+        let iteration_stories = join_all(iteration_ids.iter().map(|id| async move {
+            let query = format!("iteration:{} owner:{}", id, self.mention_name);
+            self.search_stories_all_pages(&query).await
+        }))
         .await
         .into_iter()
         .filter_map(|res| match res {
             Ok(stories) => Some(stories),
             Err(e) => {
-                dbg_file!("Failed to fetch story with error: {}", e);
+                dbg_file!("Failed to fetch iteration stories with error: {}", e);
                 None
             }
         })
@@ -72,35 +67,5 @@ impl ApiClient {
         .collect();
 
         Ok(iteration_stories)
-    }
-
-    async fn get_owned_single_iteration_stories(
-        &self,
-        iteration_id: i32,
-    ) -> anyhow::Result<Vec<Story>> {
-        let response = self
-            .get(&format!("iterations/{}/stories", iteration_id))
-            .await?;
-        let stories_slim = response.json::<Vec<StorySlim>>().await?;
-        let slim_owned: Vec<_> = stories_slim
-            .iter()
-            .filter(|s| s.owner_ids.contains(&self.user_id))
-            .collect();
-
-        let stories = {
-            let len = slim_owned.len();
-            let futures = slim_owned.into_iter().take(len).map(|slim| async move {
-                let query = format!("stories/{}", slim.id);
-                let response = self.get(&query).await?;
-                response
-                    .json::<Story>()
-                    .await
-                    .context("Failed to parse as Story")
-            });
-
-            try_join_all(futures).await?
-        };
-
-        Ok(stories)
     }
 }

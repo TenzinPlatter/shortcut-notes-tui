@@ -6,11 +6,17 @@ use uuid::Uuid;
 use crate::api::get_full_path;
 
 #[derive(Deserialize)]
-pub struct Member {
-    id: Uuid,
+pub struct Profile {
+    pub mention_name: String,
 }
 
-pub async fn get_user_id_from_api(api_token: &str) -> anyhow::Result<Uuid> {
+#[derive(Deserialize)]
+pub struct Member {
+    pub id: Uuid,
+    pub profile: Profile,
+}
+
+pub async fn get_member_from_api(api_token: &str) -> anyhow::Result<Member> {
     let full_path = get_full_path("member");
     // cant do with api client as it isnt instantiated at the point of calling this
     let response = Client::new()
@@ -21,7 +27,7 @@ pub async fn get_user_id_from_api(api_token: &str) -> anyhow::Result<Uuid> {
         .await
         .with_context(|| format!("Failed to GET {}", &full_path))?;
 
-    let user = response.json::<Member>().await?;
+    let member = response.json::<Member>().await?;
 
-    Ok(user.id)
+    Ok(member)
 }
