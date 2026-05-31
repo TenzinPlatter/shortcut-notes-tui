@@ -1,4 +1,3 @@
-use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 
 use chrono::NaiveDate;
@@ -65,10 +64,16 @@ pub fn parse_note(content: &str, file: &Path) -> Vec<ParsedTodo> {
                     .join(" ");
                 (Some(d), cleaned)
             }
-            None => (None, rest.trim().to_string()),
+            None => {
+                let cleaned = rest
+                    .split_whitespace()
+                    .collect::<Vec<_>>()
+                    .join(" ");
+                (None, cleaned)
+            }
         };
 
-        let normalized = text.trim().to_lowercase();
+        let normalized = text.to_lowercase();
         let fp = fingerprint(file, &normalized);
 
         out.push(ParsedTodo {
@@ -84,11 +89,25 @@ pub fn parse_note(content: &str, file: &Path) -> Vec<ParsedTodo> {
     out
 }
 
+/// FNV-1a 64-bit hash over the file path + normalized text.
+/// Hardcoded so fingerprint values remain stable across Rust toolchain upgrades
+/// (DefaultHasher does not guarantee this).
 pub fn fingerprint(file: &Path, normalized_text: &str) -> u64 {
-    let mut h = std::collections::hash_map::DefaultHasher::new();
-    file.hash(&mut h);
-    normalized_text.hash(&mut h);
-    h.finish()
+    const FNV_OFFSET: u64 = 0xcbf29ce484222325;
+    const FNV_PRIME: u64 = 0x00000100000001b3;
+    let mut hash = FNV_OFFSET;
+    for b in file.to_string_lossy().as_bytes() {
+        hash ^= *b as u64;
+        hash = hash.wrapping_mul(FNV_PRIME);
+    }
+    // Separator byte so e.g. ("ab.md", "c") doesn't collide with ("ab.md\0c", "").
+    hash ^= 0xff;
+    hash = hash.wrapping_mul(FNV_PRIME);
+    for b in normalized_text.as_bytes() {
+        hash ^= *b as u64;
+        hash = hash.wrapping_mul(FNV_PRIME);
+    }
+    hash
 }
 
 #[cfg(test)]
