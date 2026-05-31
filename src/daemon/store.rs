@@ -37,7 +37,7 @@ pub async fn merge_file(
                         _ => false,
                     });
                 let (id, completed) = match prior {
-                    Some(old) => (old.id, old.completed || p.completed),
+                    Some(old) => (old.id, p.completed),
                     None => (Uuid::new_v4(), p.completed),
                 };
                 Todo {
@@ -120,7 +120,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn merge_preserves_uuid_and_completed_via_fingerprint() {
+    async fn merge_preserves_uuid_via_fingerprint() {
         let tmp = tempfile::tempdir().unwrap();
         let cache = tmp.path();
 
@@ -134,24 +134,35 @@ mod tests {
         .unwrap();
         let original_id = first[0].id;
 
-        // User toggles complete via TUI (saved through save_todos).
-        let mut current = crate::todos::load_todos(cache).await;
-        current[0].completed = true;
-        crate::todos::save_todos(cache, &current).await.unwrap();
-
         // Daemon rescans, same fingerprint, line moved.
         let mut p = parsed("a.md", "ship it", 0xabc);
         p.line = 42;
         let after = merge_file(cache, Path::new("a.md"), vec![p]).await.unwrap();
 
         assert_eq!(after.len(), 1);
-        assert_eq!(after[0].id, original_id);
-        assert!(after[0].completed);
+        assert_eq!(after[0].id, original_id, "id preserved across rescan");
         if let TodoSource::NoteParsed { line, .. } = &after[0].source {
-            assert_eq!(*line, 42);
+            assert_eq!(*line, 42, "line position updated");
         } else {
             panic!("expected NoteParsed");
         }
+    }
+
+    #[tokio::test]
+    async fn merge_takes_note_as_source_of_truth_for_completion() {
+        let tmp = tempfile::tempdir().unwrap();
+        let cache = tmp.path();
+
+        // First scan: note says checked.
+        let mut p = parsed("a.md", "ship it", 0xabc);
+        p.completed = true;
+        merge_file(cache, Path::new("a.md"), vec![p]).await.unwrap();
+
+        // Second scan: note now says unchecked. Should propagate.
+        let p = parsed("a.md", "ship it", 0xabc); // completed = false by default
+        let after = merge_file(cache, Path::new("a.md"), vec![p]).await.unwrap();
+        assert_eq!(after.len(), 1);
+        assert!(!after[0].completed, "note un-check should clear completion");
     }
 
     #[tokio::test]
