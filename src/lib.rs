@@ -25,6 +25,7 @@ pub mod cache;
 pub mod cli;
 pub mod config;
 pub mod custom_list;
+pub mod daemon;
 pub mod dummy;
 pub mod error;
 pub mod keybindings;
