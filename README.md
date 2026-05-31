@@ -1,4 +1,4 @@
-# shortcut-notes
+# arc
 
 TUI for browsing current iteration stories from Shortcut and managing one-note-per-story markdown files. Notes have YAML frontmatter with story metadata and are Obsidian-compatible.
 
@@ -7,20 +7,21 @@ TUI for browsing current iteration stories from Shortcut and managing one-note-p
 1. `cargo install --path .`
 2. Set `$EDITOR`
 3. Get a [Shortcut API token](https://app.shortcut.com/settings/account/api-tokens)
-4. Create config at `~/.config/shortcut-notes/config.toml`:
+4. Create config at `~/.config/arc/config.toml`:
 
 ```toml
 notes_dir = "~/notes/work"
 api_token = "your-token-here"
-# cache_dir = "~/.cache/shortcut-notes"  # optional
+# cache_dir = "~/.cache/arc"  # optional
 ```
 
 ## Usage
 
 ```
-note              # launch TUI
-note open         # open note for active story in $EDITOR
-note tmux         # open/attach tmux session for active story
+arc               # launch TUI
+arc open          # open note for active story in $EDITOR
+arc tmux          # open/attach tmux session for active story
+arc migrate       # one-time: move shortcut-notes config/cache/notes to arc
 ```
 
 ### Keys

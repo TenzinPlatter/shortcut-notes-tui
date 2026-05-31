@@ -83,6 +83,36 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5f0e0fee31ef5ed1ba1316088939cea399010ed7731dba877ed44aeb407a75ea"
 
 [[package]]
+name = "arc"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "clap",
+ "confy",
+ "crossterm",
+ "futures",
+ "fuzzy-matcher",
+ "open",
+ "ratatui",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "shellexpand",
+ "slugify",
+ "tempfile",
+ "textwrap",
+ "throbber-widgets-tui",
+ "tokio",
+ "tui-scrollview",
+ "tui-widget-list",
+ "unicode-ellipsis",
+ "uuid",
+ "which",
+]
+
+[[package]]
 name = "atomic"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2292,36 +2322,6 @@ name = "shlex"
 version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
-
-[[package]]
-name = "shortcut-notes"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "chrono",
- "clap",
- "confy",
- "crossterm",
- "futures",
- "fuzzy-matcher",
- "open",
- "ratatui",
- "reqwest",
- "serde",
- "serde_json",
- "serde_yaml",
- "shellexpand",
- "slugify",
- "tempfile",
- "textwrap",
- "throbber-widgets-tui",
- "tokio",
- "tui-scrollview",
- "tui-widget-list",
- "unicode-ellipsis",
- "uuid",
- "which",
-]
 
 [[package]]
 name = "signal-hook"

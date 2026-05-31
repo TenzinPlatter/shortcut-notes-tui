@@ -65,7 +65,7 @@ fn default_repositories_directory() -> String {
 
 impl Config {
     pub fn read() -> anyhow::Result<Config> {
-        let config: ConfigFile = confy::load("shortcut-notes", Some("config"))?;
+        let config: ConfigFile = confy::load("arc", Some("config"))?;
 
         if config.notes_dir.is_empty() {
             anyhow::bail!("notes_dir is required in config");
@@ -101,7 +101,7 @@ impl Config {
             mux: self.mux.clone(),
         };
 
-        confy::store("shortcut-notes", Some("config"), config).context("Failed to write config")
+        confy::store("arc", Some("config"), config).context("Failed to write config")
     }
 }
 
@@ -115,6 +115,6 @@ fn expand_tilde(path: &Path) -> PathBuf {
 fn default_cache_dir() -> PathBuf {
     let mut base = env::home_dir().expect("Couldn't find home dir");
     base.push(".cache");
-    base.push("shortcut-notes");
+    base.push("arc");
     base
 }

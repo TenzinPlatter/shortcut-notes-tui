@@ -29,6 +29,7 @@ pub mod dummy;
 pub mod error;
 pub mod keybindings;
 pub mod macros;
+pub mod migrate;
 pub mod note;
 pub mod text_utils;
 pub mod time;
@@ -146,5 +147,7 @@ pub async fn handle_command(
                 no_active_story!();
             }
         }
+
+        Commands::Migrate => unreachable!("Migrate is handled in main.rs before config is loaded"),
     }
 }

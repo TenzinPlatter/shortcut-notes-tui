@@ -1,6 +1,9 @@
 use clap::Parser;
-use shortcut_notes::{
-    cache::Cache, cli::Cli, config::Config, worktree::check_worktree_dependencies,
+use arc::{
+    cache::Cache,
+    cli::{Cli, Commands},
+    config::Config,
+    worktree::check_worktree_dependencies,
 };
 
 #[tokio::main]
@@ -9,16 +12,23 @@ async fn main() -> anyhow::Result<()> {
 
     let args = Cli::parse();
     if let Some(cmd) = args.command {
+        // Migrate runs before config is loaded, since it exists precisely
+        // to move config into place.
+        if matches!(cmd, Commands::Migrate) {
+            arc::migrate::migrate()?;
+            return Ok(());
+        }
+
         let config = Config::read()?;
         let cache = Cache::read(config.cache_dir.clone()).await;
-        shortcut_notes::handle_command(cmd, cache, &config).await?;
+        arc::handle_command(cmd, cache, &config).await?;
         config.write()?;
         return Ok(());
     }
 
     // need to do the ratatui stuff manually since we are using await in the main
     let mut terminal = ratatui::init();
-    let result = shortcut_notes::run(&mut terminal).await;
+    let result = arc::run(&mut terminal).await;
     ratatui::restore();
 
     result?;

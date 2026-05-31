@@ -1,12 +1,12 @@
 [package]
-name = "shortcut-notes"
+name = "arc"
 version = "0.1.0"
 edition = "2024"
 description = "A TUI to manage notes with Shorcut project management integration"
 license = "MIT"
 
 [[bin]]
-name = "sc"
+name = "arc"
 path = "src/main.rs"
 
 [dependencies]

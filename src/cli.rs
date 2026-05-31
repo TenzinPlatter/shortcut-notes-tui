@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
-#[command(name = "note")]
+#[command(name = "arc")]
 #[command(about = "Note manager with shortcut integration", long_about = None)]
 pub struct Cli {
     #[command(subcommand)]
@@ -24,4 +24,8 @@ pub enum Commands {
 
     #[command()]
     Cat,
+
+    /// Migrate config, cache, and notes directories from the old `shortcut-notes` name to `arc`.
+    #[command()]
+    Migrate,
 }

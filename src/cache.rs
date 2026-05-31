@@ -45,7 +45,7 @@ impl Cache {
     fn default_cache_dir() -> PathBuf {
         let mut base = env::home_dir().expect("Couldn't find home dir");
         base.push(".cache");
-        base.push("shortcut-notes");
+        base.push("arc");
         base
     }
 

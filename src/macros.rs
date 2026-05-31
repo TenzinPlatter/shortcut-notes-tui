@@ -5,7 +5,7 @@ macro_rules! dbg_file {
         let mut f = std::fs::OpenOptions::new()
             .create(true)
             .append(true)
-            .open("/tmp/shortcut-notes-tui.log")
+            .open("/tmp/arc.log")
             .unwrap();
         writeln!(f, $($arg)*).unwrap();
     }};
