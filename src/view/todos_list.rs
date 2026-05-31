@@ -11,7 +11,7 @@ use tui_widget_list::{ListBuilder, ListState, ListView};
 use crate::{
     app::{
         model::TodosListState,
-        pane::todos_list::group_todos_by_date,
+        pane::todos_list::group_todos_by_section,
     },
     time::today,
     todos::Todo,
@@ -49,8 +49,8 @@ impl WidgetRef for TodosListView<'_> {
             return;
         }
 
-        let sections = group_todos_by_date(self.todos);
         let today = today();
+        let sections = group_todos_by_section(self.todos, today);
 
         // Calculate layout constraints for sections:
         // header (1) + bordered list (items*2 + 4 for border+padding) + spacing (1)
@@ -74,11 +74,7 @@ impl WidgetRef for TodosListView<'_> {
             let header_area = section_areas[area_index];
             area_index += 1;
 
-            let header_text = if section.date == today {
-                "Today".to_string()
-            } else {
-                section.date.format("%a, %b %-d %Y").to_string()
-            };
+            let header_text = section.kind.header();
 
             let header_style = Style::default().fg(Color::DarkGray);
             let display = format!(" ── {} ──", header_text);
