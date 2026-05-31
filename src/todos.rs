@@ -2,6 +2,7 @@ use std::fs::OpenOptions;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
+use anyhow::Context;
 use chrono::NaiveDate;
 use fs2::FileExt;
 use serde::{Deserialize, Serialize};
@@ -130,6 +131,106 @@ where
     .await?
 }
 
+/// Rewrite the checkbox marker on `line_1based` in `content` to match `mark_complete`.
+/// Returns `None` if the target line is missing or does not begin with a checkbox.
+fn rewrite_checkbox_line(content: &str, line_1based: u32, mark_complete: bool) -> Option<String> {
+    if line_1based == 0 {
+        return None;
+    }
+    let target_idx = (line_1based - 1) as usize;
+    let mut out = String::with_capacity(content.len());
+    let mut found = false;
+    for (idx, segment) in content.split_inclusive('\n').enumerate() {
+        if idx == target_idx {
+            let rewritten = rewrite_checkbox_in_segment(segment, mark_complete)?;
+            out.push_str(&rewritten);
+            found = true;
+        } else {
+            out.push_str(segment);
+        }
+    }
+    found.then_some(out)
+}
+
+fn rewrite_checkbox_in_segment(segment: &str, mark_complete: bool) -> Option<String> {
+    let leading_len = segment.len() - segment.trim_start().len();
+    let (leading, rest) = segment.split_at(leading_len);
+
+    let body = rest
+        .strip_prefix("- [ ] ")
+        .or_else(|| rest.strip_prefix("- [x] "))
+        .or_else(|| rest.strip_prefix("- [X] "))?;
+
+    let marker = if mark_complete { "- [x] " } else { "- [ ] " };
+    Some(format!("{leading}{marker}{body}"))
+}
+
+fn normalize_for_match(s: &str) -> String {
+    s.split_whitespace().collect::<Vec<_>>().join(" ").to_lowercase()
+}
+
+fn toggle_note_checkbox_blocking(
+    notes_dir: &Path,
+    relative_file: &Path,
+    todo_text: &str,
+    mark_complete: bool,
+) -> anyhow::Result<()> {
+    let path = notes_dir.join(relative_file);
+    let content = std::fs::read_to_string(&path)
+        .with_context(|| format!("read {}", path.display()))?;
+
+    let parsed = crate::daemon::scanner::parse_note(&content, relative_file);
+    let needle = normalize_for_match(todo_text);
+    let target = parsed
+        .iter()
+        .find(|p| normalize_for_match(&p.text) == needle)
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "no checkbox with matching text remains in {}",
+                path.display()
+            )
+        })?;
+
+    let new_content = rewrite_checkbox_line(&content, target.line, mark_complete)
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "could not rewrite checkbox at line {} of {}",
+                target.line,
+                path.display()
+            )
+        })?;
+
+    if new_content == content {
+        return Ok(());
+    }
+
+    let dir = path.parent().unwrap_or(notes_dir);
+    let mut tmp = tempfile::NamedTempFile::new_in(dir)?;
+    tmp.write_all(new_content.as_bytes())?;
+    tmp.persist(&path)?;
+    Ok(())
+}
+
+/// Toggle the source-of-truth checkbox in a note file for a `NoteParsed` todo.
+/// `relative_file` is interpreted relative to `notes_dir` (matching how the
+/// daemon stores it). The target line is located by matching the parsed
+/// checkbox text against `todo_text` (case- and whitespace-insensitive), which
+/// stays correct across line moves and across changes to the fingerprint hash.
+pub async fn toggle_note_checkbox(
+    notes_dir: &Path,
+    relative_file: &Path,
+    todo_text: &str,
+    mark_complete: bool,
+) -> anyhow::Result<()> {
+    let notes_dir = notes_dir.to_path_buf();
+    let relative_file = relative_file.to_path_buf();
+    let todo_text = todo_text.to_string();
+    tokio::task::spawn_blocking(move || {
+        toggle_note_checkbox_blocking(&notes_dir, &relative_file, &todo_text, mark_complete)
+    })
+    .await?
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -223,5 +324,100 @@ mod tests {
 
         let final_todos = rt.block_on(load_todos(&cache_dir));
         assert_eq!(final_todos.len(), 40, "lost updates detected");
+    }
+
+    #[test]
+    fn rewrite_checkbox_line_marks_open_complete() {
+        let content = "# h\n- [ ] todo\nbody\n";
+        let out = rewrite_checkbox_line(content, 2, true).unwrap();
+        assert_eq!(out, "# h\n- [x] todo\nbody\n");
+    }
+
+    #[test]
+    fn rewrite_checkbox_line_marks_complete_open() {
+        let content = "- [x] done\n";
+        let out = rewrite_checkbox_line(content, 1, false).unwrap();
+        assert_eq!(out, "- [ ] done\n");
+    }
+
+    #[test]
+    fn rewrite_checkbox_line_preserves_indentation_and_capital_x() {
+        let content = "    - [X] indented\n";
+        let out = rewrite_checkbox_line(content, 1, false).unwrap();
+        assert_eq!(out, "    - [ ] indented\n");
+    }
+
+    #[test]
+    fn rewrite_checkbox_line_keeps_trailing_newline_absence() {
+        let content = "- [ ] x";
+        let out = rewrite_checkbox_line(content, 1, true).unwrap();
+        assert_eq!(out, "- [x] x");
+    }
+
+    #[test]
+    fn rewrite_checkbox_line_returns_none_when_not_a_checkbox() {
+        let content = "just a header\nnot a checkbox\n";
+        assert!(rewrite_checkbox_line(content, 2, true).is_none());
+    }
+
+    #[test]
+    fn toggle_note_checkbox_finds_line_by_text_even_after_move() {
+        let tmp = tempfile::tempdir().unwrap();
+        let rel = PathBuf::from("note.md");
+        let path = tmp.path().join(&rel);
+
+        // Simulate the user having moved the line down before toggling.
+        std::fs::write(&path, "# header\n\n- [ ] ship it\n").unwrap();
+
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(toggle_note_checkbox(tmp.path(), &rel, "ship it", true))
+            .unwrap();
+
+        let after = std::fs::read_to_string(&path).unwrap();
+        assert_eq!(after, "# header\n\n- [x] ship it\n");
+    }
+
+    #[test]
+    fn toggle_note_checkbox_matches_case_and_whitespace_insensitively() {
+        let tmp = tempfile::tempdir().unwrap();
+        let rel = PathBuf::from("note.md");
+        let path = tmp.path().join(&rel);
+        std::fs::write(&path, "- [ ] Ship It\n").unwrap();
+
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(toggle_note_checkbox(tmp.path(), &rel, "  ship   it  ", true))
+            .unwrap();
+
+        let after = std::fs::read_to_string(&path).unwrap();
+        assert_eq!(after, "- [x] Ship It\n");
+    }
+
+    #[test]
+    fn toggle_note_checkbox_noop_when_already_in_state() {
+        let tmp = tempfile::tempdir().unwrap();
+        let rel = PathBuf::from("note.md");
+        let path = tmp.path().join(&rel);
+        std::fs::write(&path, "- [x] done\n").unwrap();
+
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(toggle_note_checkbox(tmp.path(), &rel, "done", true))
+            .unwrap();
+
+        let after = std::fs::read_to_string(&path).unwrap();
+        assert_eq!(after, "- [x] done\n");
+    }
+
+    #[test]
+    fn toggle_note_checkbox_errors_when_text_not_found() {
+        let tmp = tempfile::tempdir().unwrap();
+        let rel = PathBuf::from("note.md");
+        let path = tmp.path().join(&rel);
+        std::fs::write(&path, "- [ ] something else\n").unwrap();
+
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let err = rt
+            .block_on(toggle_note_checkbox(tmp.path(), &rel, "nonexistent", true))
+            .unwrap_err();
+        assert!(err.to_string().contains("no checkbox"));
     }
 }

@@ -198,13 +198,23 @@ pub fn update(state: &mut TodosListState, todos: &mut Vec<Todo>, msg: TodosListM
         }
 
         TodosListMsg::ToggleComplete => {
-            if let Some(id) = state.selected_id
-                && let Some(todo) = todos.iter_mut().find(|t| t.id == id)
-            {
-                todo.completed = !todo.completed;
-            }
+            let Some(id) = state.selected_id else {
+                return vec![Cmd::None];
+            };
+            let Some(todo) = todos.iter_mut().find(|t| t.id == id) else {
+                return vec![Cmd::None];
+            };
+            todo.completed = !todo.completed;
 
-            vec![Cmd::WriteTodos]
+            let mut cmds = vec![Cmd::WriteTodos];
+            if let crate::todos::TodoSource::NoteParsed { file, .. } = &todo.source {
+                cmds.push(Cmd::SyncNoteCheckbox {
+                    file: file.clone(),
+                    text: todo.text.clone(),
+                    complete: todo.completed,
+                });
+            }
+            cmds
         }
 
         TodosListMsg::FocusSectionNext | TodosListMsg::FocusSectionPrev => {

@@ -69,6 +69,11 @@ pub enum Cmd {
         name: String,
     },
     WriteTodos,
+    SyncNoteCheckbox {
+        file: PathBuf,
+        text: String,
+        complete: bool,
+    },
 }
 
 pub async fn execute(
@@ -179,6 +184,27 @@ pub async fn execute(
                 *list = todos_snapshot;
             })
             .await?;
+            Ok(())
+        }
+
+        Cmd::SyncNoteCheckbox {
+            file,
+            text,
+            complete,
+        } => {
+            let notes_dir = model.config.notes_dir.clone();
+            let sender = sender.clone();
+            tokio::spawn(async move {
+                if let Err(e) =
+                    crate::todos::toggle_note_checkbox(&notes_dir, &file, &text, complete).await
+                {
+                    let info = ErrorInfo::new(
+                        "Failed to sync todo state to note".to_string(),
+                        e.to_string(),
+                    );
+                    let _ = sender.send(Msg::Error(info));
+                }
+            });
             Ok(())
         }
 
