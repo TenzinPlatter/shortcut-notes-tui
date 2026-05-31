@@ -240,6 +240,18 @@ impl App {
 
             Msg::CacheWritten => vec![Cmd::None],
 
+            Msg::TodosReloaded(todos) => {
+                let prev_selected = self.model.ui.todos_list.selected_id;
+                self.model.data.todos = todos;
+                // Preserve selection if the UUID still exists; else clear it.
+                if let Some(id) = prev_selected
+                    && !self.model.data.todos.iter().any(|t| t.id == id)
+                {
+                    self.model.ui.todos_list.selected_id = None;
+                }
+                vec![Cmd::None]
+            }
+
             Msg::Error(e) => {
                 self.model.ui.errors.push(e);
                 // Stop loading spinner on error
