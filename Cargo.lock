@@ -98,6 +98,7 @@ dependencies = [
  "notify-rust",
  "open",
  "ratatui",
+ "regex",
  "reqwest",
  "serde",
  "serde_json",

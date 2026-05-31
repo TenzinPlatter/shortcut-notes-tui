@@ -1,6 +1,9 @@
+use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
+use std::sync::OnceLock;
 
 use chrono::NaiveDate;
+use regex::Regex;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ParsedTodo {
@@ -12,33 +15,20 @@ pub struct ParsedTodo {
     pub fingerprint: u64,
 }
 
+fn date_token_regex() -> &'static Regex {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    RE.get_or_init(|| {
+        Regex::new(r"@(\d{2}-\d{2}-\d{4})").expect("date token regex compiles")
+    })
+}
+
+fn collapse_whitespace(s: &str) -> String {
+    s.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
 pub fn parse_note(content: &str, file: &Path) -> Vec<ParsedTodo> {
     let mut out = Vec::new();
-    let date_re_simple = |s: &str| -> Option<(NaiveDate, std::ops::Range<usize>)> {
-        // Find first @DD-MM-YYYY token (literally @ then 2-2-4 digits).
-        let bytes = s.as_bytes();
-        let mut i = 0;
-        while i < bytes.len() {
-            if bytes[i] == b'@' && i + 11 <= bytes.len() {
-                let candidate = &s[i + 1..i + 11];
-                if candidate.as_bytes().iter().enumerate().all(|(idx, b)| {
-                    matches!(
-                        (idx, b),
-                        (0..=1, b'0'..=b'9')
-                            | (2, b'-')
-                            | (3..=4, b'0'..=b'9')
-                            | (5, b'-')
-                            | (6..=9, b'0'..=b'9')
-                    )
-                }) && let Ok(d) = NaiveDate::parse_from_str(candidate, "%d-%m-%Y")
-                {
-                    return Some((d, i..i + 11));
-                }
-            }
-            i += 1;
-        }
-        None
-    };
+    let re = date_token_regex();
 
     for (idx, raw_line) in content.lines().enumerate() {
         let line_no = (idx as u32) + 1;
@@ -53,24 +43,20 @@ pub fn parse_note(content: &str, file: &Path) -> Vec<ParsedTodo> {
             continue;
         };
 
-        let (date, text) = match date_re_simple(rest) {
+        let (date, text) = match re
+            .captures(rest)
+            .and_then(|c| {
+                let m = c.get(0)?;
+                let d = NaiveDate::parse_from_str(&c[1], "%d-%m-%Y").ok()?;
+                Some((d, m.range()))
+            }) {
             Some((d, range)) => {
-                let mut s = String::with_capacity(rest.len() - 11);
+                let mut s = String::with_capacity(rest.len().saturating_sub(range.len()));
                 s.push_str(&rest[..range.start]);
                 s.push_str(&rest[range.end..]);
-                let cleaned = s
-                    .split_whitespace()
-                    .collect::<Vec<_>>()
-                    .join(" ");
-                (Some(d), cleaned)
+                (Some(d), collapse_whitespace(&s))
             }
-            None => {
-                let cleaned = rest
-                    .split_whitespace()
-                    .collect::<Vec<_>>()
-                    .join(" ");
-                (None, cleaned)
-            }
+            None => (None, collapse_whitespace(rest)),
         };
 
         let normalized = text.to_lowercase();
@@ -89,25 +75,14 @@ pub fn parse_note(content: &str, file: &Path) -> Vec<ParsedTodo> {
     out
 }
 
-/// FNV-1a 64-bit hash over the file path + normalized text.
-/// Hardcoded so fingerprint values remain stable across Rust toolchain upgrades
-/// (DefaultHasher does not guarantee this).
+/// Hash of file path + normalized text. Used to identify "same todo" across rescans.
+/// Uses stdlib's `DefaultHasher`; values may rotate on Rust toolchain upgrades,
+/// which causes a one-time mass re-id of every note-parsed todo. Acceptable tradeoff.
 pub fn fingerprint(file: &Path, normalized_text: &str) -> u64 {
-    const FNV_OFFSET: u64 = 0xcbf29ce484222325;
-    const FNV_PRIME: u64 = 0x00000100000001b3;
-    let mut hash = FNV_OFFSET;
-    for b in file.to_string_lossy().as_bytes() {
-        hash ^= *b as u64;
-        hash = hash.wrapping_mul(FNV_PRIME);
-    }
-    // Separator byte so e.g. ("ab.md", "c") doesn't collide with ("ab.md\0c", "").
-    hash ^= 0xff;
-    hash = hash.wrapping_mul(FNV_PRIME);
-    for b in normalized_text.as_bytes() {
-        hash ^= *b as u64;
-        hash = hash.wrapping_mul(FNV_PRIME);
-    }
-    hash
+    let mut h = std::collections::hash_map::DefaultHasher::new();
+    file.hash(&mut h);
+    normalized_text.hash(&mut h);
+    h.finish()
 }
 
 #[cfg(test)]
