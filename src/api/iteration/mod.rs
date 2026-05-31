@@ -1,3 +1,4 @@
+use anyhow::Context;
 use chrono::NaiveDate;
 use futures::future::join_all;
 use serde::{Deserialize, Serialize};
@@ -7,6 +8,12 @@ use crate::{
     custom_list::LinearListItem,
     dbg_file,
 };
+
+#[derive(Deserialize)]
+struct IterationSearchResults {
+    data: Vec<Iteration>,
+    next: Option<String>,
+}
 
 #[derive(Deserialize, Serialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
@@ -33,12 +40,35 @@ impl LinearListItem for Iteration {
 
 impl ApiClient {
     pub async fn get_current_iterations(&self) -> anyhow::Result<Vec<Iteration>> {
-        let response = self.get("iterations").await?;
-        let iterations: Vec<Iteration> = response.json().await?;
-        Ok(iterations
-            .into_iter()
-            .filter(|it| it.status == IterationStatus::Started)
-            .collect())
+        let mut all = Vec::new();
+        let mut next_path: Option<String> = None;
+
+        loop {
+            let response = match &next_path {
+                None => {
+                    let params = [
+                        ("query", "is:started"),
+                        ("page_size", "250"),
+                        ("detail", "slim"),
+                    ];
+                    self.get_with_query("search/iterations", &params).await?
+                }
+                Some(path) => self.get_absolute_path(path).await?,
+            };
+
+            let page: IterationSearchResults = response
+                .json()
+                .await
+                .context("Failed to parse search/iterations response")?;
+
+            all.extend(page.data);
+            match page.next {
+                Some(n) => next_path = Some(n),
+                None => break,
+            }
+        }
+
+        Ok(all)
     }
 
     pub async fn get_all_iterations(&self) -> anyhow::Result<Vec<Iteration>> {
