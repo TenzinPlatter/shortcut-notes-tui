@@ -174,7 +174,11 @@ pub async fn execute(
         }
 
         Cmd::WriteTodos => {
-            crate::todos::save_todos(&model.config.cache_dir, &model.data.todos).await?;
+            let todos_snapshot = model.data.todos.clone();
+            crate::todos::modify_with_lock(&model.config.cache_dir, move |list| {
+                *list = todos_snapshot;
+            })
+            .await?;
             Ok(())
         }
 
