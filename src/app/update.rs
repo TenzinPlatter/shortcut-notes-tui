@@ -30,7 +30,6 @@ impl App {
                     }
                 }
                 // Clean up completed todos on exit
-                self.model.data.todos.retain(|t| !t.completed);
                 vec![Cmd::WriteTodos]
             }
 

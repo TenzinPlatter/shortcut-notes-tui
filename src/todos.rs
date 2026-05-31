@@ -26,7 +26,10 @@ impl Todo {
 pub async fn load_todos(cache_dir: &PathBuf) -> Vec<Todo> {
     let path = cache_dir.join("todos.json");
     match tokio::fs::read_to_string(&path).await {
-        Ok(content) => serde_json::from_str(&content).unwrap_or_default(),
+        Ok(content) => {
+            let todos: Vec<Todo> = serde_json::from_str(&content).unwrap_or_default();
+            todos.into_iter().filter(|t| !t.completed).collect()
+        }
         Err(_) => Vec::new(),
     }
 }
