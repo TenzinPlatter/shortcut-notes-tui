@@ -44,7 +44,11 @@ impl App {
         let (sender, receiver) = mpsc::unbounded_channel();
         let sender_clone = sender.clone();
 
-        spawn_todos_watcher(config.cache_dir.clone(), sender.clone());
+        spawn_todos_watcher(
+            config.cache_dir.clone(),
+            sender.clone(),
+            tokio::runtime::Handle::current(),
+        );
 
         let mut model = Model::from_cache_and_config(cache, config.clone(), todos);
 
@@ -168,7 +172,11 @@ async fn fetch_info_from_api(api_client: ApiClient, sender: UnboundedSender<Msg>
     vec![current_iteration_handle, epics_handle, all_iterations_handle]
 }
 
-fn spawn_todos_watcher(cache_dir: std::path::PathBuf, sender: UnboundedSender<Msg>) {
+fn spawn_todos_watcher(
+    cache_dir: std::path::PathBuf,
+    sender: UnboundedSender<Msg>,
+    handle: tokio::runtime::Handle,
+) {
     use notify::{EventKind, RecursiveMode, Watcher};
     use std::sync::mpsc as std_mpsc;
 
@@ -205,7 +213,7 @@ fn spawn_todos_watcher(cache_dir: std::path::PathBuf, sender: UnboundedSender<Ms
 
             let cache_dir = cache_dir.clone();
             let sender = sender.clone();
-            tokio::spawn(async move {
+            handle.spawn(async move {
                 let todos = crate::todos::load_todos(&cache_dir).await;
                 let _ = sender.send(Msg::TodosReloaded(todos));
             });
