@@ -101,9 +101,9 @@ pub async fn save_todos(cache_dir: &Path, todos: &[Todo]) -> anyhow::Result<()> 
     tokio::task::spawn_blocking(move || {
         let lock = open_lock(&cache_dir)?;
         FileExt::lock_exclusive(&lock)?;
-        let res = write_todos_inner(&cache_dir, &todos);
+        let result: anyhow::Result<()> = (|| write_todos_inner(&cache_dir, &todos))();
         let _ = FileExt::unlock(&lock);
-        res
+        result
     })
     .await?
 }
@@ -118,11 +118,14 @@ where
     tokio::task::spawn_blocking(move || {
         let lock = open_lock(&cache_dir)?;
         FileExt::lock_exclusive(&lock)?;
-        let mut list = read_todos_inner(&cache_dir);
-        f(&mut list);
-        write_todos_inner(&cache_dir, &list)?;
+        let result = (|| {
+            let mut list = read_todos_inner(&cache_dir);
+            f(&mut list);
+            write_todos_inner(&cache_dir, &list)?;
+            Ok::<_, anyhow::Error>(list)
+        })();
         let _ = FileExt::unlock(&lock);
-        Ok(list)
+        result
     })
     .await?
 }
