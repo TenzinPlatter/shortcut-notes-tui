@@ -58,7 +58,7 @@ pub async fn get_member_info(
     }
 
     let member = get_member_from_api(api_token).await?;
-    Ok((member.id, member.profile.mention_name))
+    Ok((member.id, member.mention_name))
 }
 
 pub async fn run(terminal: &mut DefaultTerminal) -> anyhow::Result<()> {
