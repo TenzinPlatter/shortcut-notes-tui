@@ -37,6 +37,8 @@ fuzzy-matcher = "0.3"
 fs2 = "0.4"
 notify = "8"
 notify-rust = "4"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 
 [profile.release]
 opt-level = "s"
