@@ -241,6 +241,12 @@ impl App {
             Msg::TodosReloaded(todos) => {
                 let prev_selected = self.model.ui.todos_list.selected_id;
                 self.model.data.todos = todos;
+                // Keep already-shown todos visible and pick up any new incomplete
+                // ones; completed todos we've never shown stay hidden.
+                self.model
+                    .ui
+                    .todos_list
+                    .refresh_visible(&self.model.data.todos);
                 // Preserve selection if the UUID still exists; else clear it.
                 if let Some(id) = prev_selected
                     && !self.model.data.todos.iter().any(|t| t.id == id)
@@ -539,6 +545,18 @@ impl App {
             }
             ViewType::Todos => {
                 if key.code == KeyCode::Char('n') {
+                    // On a note-parsed todo, open its source note; otherwise add a todo.
+                    let source = self
+                        .model
+                        .ui
+                        .todos_list
+                        .selected_id
+                        .and_then(|id| self.model.data.todos.iter().find(|t| t.id == id))
+                        .map(|t| &t.source);
+                    if let Some(crate::todos::TodoSource::NoteParsed { file, .. }) = source {
+                        let path = self.config.notes_dir.join(file);
+                        return vec![Cmd::OpenDailyNote { path }];
+                    }
                     return self.update(Msg::AddTodoModal(AddTodoModalMsg::Open));
                 }
                 if let Some(msg) = todos_list::key_to_msg(key) {

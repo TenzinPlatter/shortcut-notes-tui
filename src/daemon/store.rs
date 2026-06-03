@@ -19,43 +19,59 @@ pub async fn merge_file(
 ) -> Result<Vec<Todo>> {
     let file = file.to_path_buf();
     modify_with_lock(cache_dir, move |list| {
-        let (this_file_old, mut others): (Vec<Todo>, Vec<Todo>) =
-            list.drain(..).partition(|t| match &t.source {
-                TodoSource::NoteParsed { file: f, .. } => f == &file,
-                _ => false,
-            });
+        // Parsed entries not yet matched to an existing todo. We drain matches
+        // out of this as we walk the list, so whatever remains is genuinely new.
+        let mut unmatched: Vec<ParsedTodo> = parsed;
 
-        let new_entries: Vec<Todo> = parsed
-            .into_iter()
-            .map(|p| {
-                let prior = this_file_old
-                    .iter()
-                    .find(|old| match &old.source {
-                        TodoSource::NoteParsed { fingerprint, .. } => {
-                            *fingerprint == p.fingerprint
-                        }
-                        _ => false,
-                    });
-                let (id, completed) = match prior {
-                    Some(old) => (old.id, p.completed),
-                    None => (Uuid::new_v4(), p.completed),
-                };
-                Todo {
-                    id,
+        // Walk the existing list in order, preserving the position of every todo
+        // so the UI doesn't reshuffle on re-scan. Entries from `file` are updated
+        // in place (matched by fingerprint) or dropped if their line is gone.
+        let mut next: Vec<Todo> = Vec::with_capacity(list.len() + unmatched.len());
+        for todo in list.drain(..) {
+            let this_file_fp = match &todo.source {
+                TodoSource::NoteParsed { file: f, fingerprint, .. } if f == &file => {
+                    Some(*fingerprint)
+                }
+                _ => None,
+            };
+            let Some(fp) = this_file_fp else {
+                // Manual entry, or NoteParsed from another file: keep untouched.
+                next.push(todo);
+                continue;
+            };
+            if let Some(pos) = unmatched.iter().position(|p| p.fingerprint == fp) {
+                let p = unmatched.remove(pos);
+                next.push(Todo {
+                    id: todo.id,
                     text: p.text,
                     date: p.date,
-                    completed,
+                    completed: p.completed,
                     source: TodoSource::NoteParsed {
                         file: p.file,
                         line: p.line,
                         fingerprint: p.fingerprint,
                     },
-                }
-            })
-            .collect();
+                });
+            }
+            // else: the line no longer exists in the note — drop it.
+        }
 
-        others.extend(new_entries);
-        *list = others;
+        // Genuinely new checkboxes are appended at the end.
+        for p in unmatched {
+            next.push(Todo {
+                id: Uuid::new_v4(),
+                text: p.text,
+                date: p.date,
+                completed: p.completed,
+                source: TodoSource::NoteParsed {
+                    file: p.file,
+                    line: p.line,
+                    fingerprint: p.fingerprint,
+                },
+            });
+        }
+
+        *list = next;
     })
     .await
 }
@@ -163,6 +179,33 @@ mod tests {
         let after = merge_file(cache, Path::new("a.md"), vec![p]).await.unwrap();
         assert_eq!(after.len(), 1);
         assert!(!after[0].completed, "note un-check should clear completion");
+    }
+
+    #[tokio::test]
+    async fn merge_preserves_global_order_of_existing_todos() {
+        let tmp = tempfile::tempdir().unwrap();
+        let cache = tmp.path();
+
+        // Two notes; list ends up [from a, from b].
+        merge_file(cache, Path::new("a.md"), vec![parsed("a.md", "from a", 1)])
+            .await
+            .unwrap();
+        merge_file(cache, Path::new("b.md"), vec![parsed("b.md", "from b", 2)])
+            .await
+            .unwrap();
+
+        // Re-scan a.md (e.g. user ticked it off in the UI, daemon re-parses).
+        // This must NOT reorder the list — otherwise the TUI jumps.
+        let after = merge_file(cache, Path::new("a.md"), vec![parsed("a.md", "from a", 1)])
+            .await
+            .unwrap();
+
+        let texts: Vec<&str> = after.iter().map(|t| t.text.as_str()).collect();
+        assert_eq!(
+            texts,
+            vec!["from a", "from b"],
+            "re-scanning a note must preserve the position of existing todos"
+        );
     }
 
     #[tokio::test]

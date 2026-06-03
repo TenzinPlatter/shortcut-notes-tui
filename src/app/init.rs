@@ -1,3 +1,6 @@
+use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
+
 use anyhow::Result;
 use tokio::{sync::mpsc::{self, UnboundedSender}, task::JoinHandle};
 use uuid::Uuid;
@@ -44,6 +47,9 @@ impl App {
         let (sender, receiver) = mpsc::unbounded_channel();
         let sender_clone = sender.clone();
 
+        let key_reader_paused = Arc::new(AtomicBool::new(false));
+        super::spawn_key_reader(sender.clone(), key_reader_paused.clone());
+
         spawn_todos_watcher(
             config.cache_dir.clone(),
             sender.clone(),
@@ -62,6 +68,7 @@ impl App {
             sender: sender_clone,
             api_client,
             config,
+            key_reader_paused,
         })
     }
 
@@ -79,6 +86,9 @@ impl App {
 
         let (sender, receiver) = mpsc::unbounded_channel();
         let sender_clone = sender.clone();
+
+        let key_reader_paused = Arc::new(AtomicBool::new(false));
+        super::spawn_key_reader(sender.clone(), key_reader_paused.clone());
 
         let iteration = dummy::iteration();
         let stories = dummy::stories();
@@ -113,6 +123,7 @@ impl App {
             sender: sender_clone,
             api_client,
             config,
+            key_reader_paused,
         })
     }
 }

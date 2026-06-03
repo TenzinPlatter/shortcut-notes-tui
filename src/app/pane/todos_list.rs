@@ -169,13 +169,21 @@ fn prev_todo_id(current_id: Uuid, sections: &[DaySection]) -> Option<Uuid> {
     sections.last()?.todos.last().map(|t| t.id)
 }
 
+/// Sections built from only the todos that should currently be shown (incomplete,
+/// or completed during this session). Hidden completed todos are skipped so the
+/// UI never navigates onto them.
+fn visible_sections(state: &TodosListState, todos: &[Todo]) -> Vec<DaySection> {
+    let visible: Vec<Todo> = todos.iter().filter(|t| state.is_visible(t)).cloned().collect();
+    group_todos_by_section(&visible, crate::time::today()).ordered_sections()
+}
+
 pub fn update(state: &mut TodosListState, todos: &mut Vec<Todo>, msg: TodosListMsg) -> Vec<Cmd> {
     match msg {
         TodosListMsg::FocusNext => {
-            if todos.is_empty() {
+            let sections = visible_sections(state, todos);
+            if sections.is_empty() {
                 return vec![Cmd::None];
             }
-            let sections = group_todos_by_section(todos, crate::time::today()).ordered_sections();
             if let Some(current_id) = state.selected_id {
                 state.selected_id = next_todo_id(current_id, &sections);
             } else {
@@ -185,10 +193,10 @@ pub fn update(state: &mut TodosListState, todos: &mut Vec<Todo>, msg: TodosListM
         }
 
         TodosListMsg::FocusPrev => {
-            if todos.is_empty() {
+            let sections = visible_sections(state, todos);
+            if sections.is_empty() {
                 return vec![Cmd::None];
             }
-            let sections = group_todos_by_section(todos, crate::time::today()).ordered_sections();
             if let Some(current_id) = state.selected_id {
                 state.selected_id = prev_todo_id(current_id, &sections);
             } else {
@@ -205,6 +213,9 @@ pub fn update(state: &mut TodosListState, todos: &mut Vec<Todo>, msg: TodosListM
                 return vec![Cmd::None];
             };
             todo.completed = !todo.completed;
+            // Keep it on screen once completed so an accidental tick can be undone
+            // without the row vanishing.
+            state.visible.insert(id);
 
             let mut cmds = vec![Cmd::WriteTodos];
             if let crate::todos::TodoSource::NoteParsed { file, .. } = &todo.source {
@@ -218,7 +229,7 @@ pub fn update(state: &mut TodosListState, todos: &mut Vec<Todo>, msg: TodosListM
         }
 
         TodosListMsg::FocusSectionNext | TodosListMsg::FocusSectionPrev => {
-            let sections = group_todos_by_section(todos, crate::time::today()).ordered_sections();
+            let sections = visible_sections(state, todos);
             if sections.is_empty() {
                 return vec![Cmd::None];
             }
@@ -252,7 +263,7 @@ pub fn update(state: &mut TodosListState, todos: &mut Vec<Todo>, msg: TodosListM
                 return vec![Cmd::None];
             }
 
-            let sections = group_todos_by_section(todos, crate::time::today()).ordered_sections();
+            let sections = visible_sections(state, todos);
             let next_id = next_todo_id(id, &sections);
             let prev_id = prev_todo_id(id, &sections);
 
@@ -313,6 +324,64 @@ mod tests {
             completed: false,
             source: TodoSource::Manual,
         }
+    }
+
+    fn completed(text: &str) -> Todo {
+        Todo {
+            id: uuid::Uuid::new_v4(),
+            text: text.to_string(),
+            date: None,
+            completed: true,
+            source: TodoSource::Manual,
+        }
+    }
+
+    #[test]
+    fn completed_todo_loaded_at_open_is_hidden() {
+        let incomplete = manual_undated("keep me");
+        let done = completed("hide me");
+        let todos = vec![incomplete.clone(), done.clone()];
+
+        let mut state = TodosListState::default();
+        state.refresh_visible(&todos);
+
+        assert!(state.is_visible(&incomplete));
+        assert!(!state.is_visible(&done), "pre-completed todo stays hidden");
+
+        let sections = visible_sections(&state, &todos);
+        let ids: Vec<_> = sections.iter().flat_map(|s| s.todos.iter().map(|t| t.id)).collect();
+        assert_eq!(ids, vec![incomplete.id]);
+    }
+
+    #[test]
+    fn toggling_complete_keeps_todo_visible() {
+        let todo = manual_undated("oops");
+        let mut todos = vec![todo.clone()];
+        let mut state = TodosListState::default();
+        state.refresh_visible(&todos);
+        state.selected_id = Some(todo.id);
+
+        update(&mut state, &mut todos, TodosListMsg::ToggleComplete);
+
+        assert!(todos[0].completed);
+        assert!(
+            state.is_visible(&todos[0]),
+            "a todo completed this session must remain on screen"
+        );
+        let sections = visible_sections(&state, &todos);
+        assert_eq!(sections.iter().flat_map(|s| &s.todos).count(), 1);
+    }
+
+    #[test]
+    fn refresh_visible_drops_ids_that_disappear() {
+        let todo = manual_undated("gone soon");
+        let mut state = TodosListState::default();
+        state.refresh_visible(&[todo.clone()]);
+        assert!(state.visible.contains(&todo.id));
+
+        // Todo no longer in the list (e.g. note line deleted) -> id pruned.
+        state.refresh_visible(&[]);
+        assert!(state.visible.is_empty());
     }
 
     #[test]

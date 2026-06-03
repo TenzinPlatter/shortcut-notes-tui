@@ -30,7 +30,16 @@ impl<'a> TodosListView<'a> {
 
 impl WidgetRef for TodosListView<'_> {
     fn render_ref(&self, area: Rect, buf: &mut Buffer) {
-        if self.todos.is_empty() {
+        // Only render todos that are incomplete or were completed this session;
+        // completed todos hidden since launch are filtered out.
+        let visible: Vec<Todo> = self
+            .todos
+            .iter()
+            .filter(|t| self.state.is_visible(t))
+            .cloned()
+            .collect();
+
+        if visible.is_empty() {
             let block = Block::bordered().border_set(border::THICK);
             let inner = block.inner(area);
             block.render(area, buf);
@@ -50,7 +59,7 @@ impl WidgetRef for TodosListView<'_> {
         }
 
         let today = today();
-        let sections = group_todos_by_section(self.todos, today).ordered_sections();
+        let sections = group_todos_by_section(&visible, today).ordered_sections();
 
         // Calculate layout constraints for sections:
         // header (1) + bordered list (items*2 + 4 for border+padding) + spacing (1)

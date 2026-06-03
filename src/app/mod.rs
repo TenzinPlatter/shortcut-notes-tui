@@ -1,5 +1,7 @@
 use std::fs::read_to_string;
 use std::io::Write;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use anyhow::Result;
 use crossterm::ExecutableCommand;
@@ -38,6 +40,10 @@ pub struct App {
     pub sender: mpsc::UnboundedSender<msg::Msg>,
     pub api_client: ApiClient,
     pub config: Config,
+    /// When set, the key-reader thread stops consuming terminal input so an
+    /// external program (editor, fzf) launched via `with_suspended_tui` can own
+    /// the terminal.
+    pub key_reader_paused: Arc<AtomicBool>,
 }
 
 impl App {
@@ -89,7 +95,7 @@ impl App {
                 story_app_url,
                 iteration_app_url,
             } => {
-                with_suspended_tui(terminal, || {
+                with_suspended_tui(&self.key_reader_paused, terminal,|| {
                     cmd::open_note_in_editor(
                         story_id,
                         story_name,
@@ -106,7 +112,7 @@ impl App {
                 iteration_name,
                 iteration_app_url,
             } => {
-                with_suspended_tui(terminal, || {
+                with_suspended_tui(&self.key_reader_paused, terminal,|| {
                     cmd::open_iteration_note_in_editor(
                         iteration_id,
                         iteration_name,
@@ -122,7 +128,7 @@ impl App {
                 description,
             } => {
                 let config_editor = self.model.config.editor.clone();
-                let edited = with_suspended_tui(terminal, || {
+                let edited = with_suspended_tui(&self.key_reader_paused, terminal,|| {
                     let mut tempfile = NamedTempFile::new()?;
                     tempfile.write_all(description.as_bytes())?;
                     let tmp_path = tempfile.path().to_path_buf();
@@ -144,7 +150,7 @@ impl App {
 
             cmd::Cmd::CreateGitWorktree { branch_name } => {
                 let repos = get_repo_list(&self.model.config).await?;
-                let chosen = match with_suspended_tui(terminal, || select_repo_with_fzf(&repos)) {
+                let chosen = match with_suspended_tui(&self.key_reader_paused, terminal,|| select_repo_with_fzf(&repos)) {
                     Ok(repo) => repo,
                     Err(e) => {
                         self.model
@@ -164,7 +170,7 @@ impl App {
                 epic_name,
                 epic_app_url,
             } => {
-                with_suspended_tui(terminal, || {
+                with_suspended_tui(&self.key_reader_paused, terminal,|| {
                     cmd::open_epic_note_in_editor(
                         epic_id,
                         epic_name,
@@ -176,14 +182,14 @@ impl App {
             }
 
             cmd::Cmd::OpenDailyNote { path } => {
-                with_suspended_tui(terminal, || {
+                with_suspended_tui(&self.key_reader_paused, terminal,|| {
                     cmd::open_daily_note_with_frontmatter(&self.model.config, &path)
                 })?;
                 self.sender.send(msg::Msg::NoteOpened).ok();
             }
 
             cmd::Cmd::OpenScratchNote { path, name } => {
-                with_suspended_tui(terminal, || {
+                with_suspended_tui(&self.key_reader_paused, terminal,|| {
                     cmd::open_scratch_note_in_editor(&name, &path, &self.model.config)
                 })?;
                 self.sender.send(msg::Msg::NoteOpened).ok();
@@ -192,7 +198,7 @@ impl App {
             cmd::Cmd::OpenTmuxSession { story_name } => {
                 let session_name = Story::tmux_session_name(&story_name);
                 let mux = self.model.config.mux.clone();
-                with_suspended_tui(terminal, || {
+                with_suspended_tui(&self.key_reader_paused, terminal,|| {
                     cmd::open_mux_session_sync(&session_name, &mux)
                 })?;
             }
@@ -204,29 +210,10 @@ impl App {
     }
 
     async fn poll_for_message(&mut self) -> Result<Option<msg::Msg>> {
-        use crossterm::event::{self, Event, KeyEventKind};
-        use std::time::Duration;
-
-        tokio::select! {
-            terminal_event = tokio::task::spawn_blocking(|| {
-                if event::poll(Duration::from_millis(100))? {
-                    event::read()
-                } else {
-                    Ok(Event::Resize(0, 0))
-                }
-            }) => {
-                match terminal_event?? {
-                    Event::Key(key) if key.kind == KeyEventKind::Press => {
-                        Ok(Some(msg::Msg::KeyPressed(key)))
-                    }
-                    _ => Ok(None)
-                }
-            }
-
-            Some(msg) = self.receiver.recv() => {
-                Ok(Some(msg))
-            }
-        }
+        // Key events and async messages all arrive on the one channel, in order.
+        // Terminal input is read on a dedicated thread (see `spawn_key_reader`),
+        // so nothing is lost to select-cancellation here.
+        Ok(self.receiver.recv().await)
     }
 
     fn draw(&mut self, frame: &mut Frame) {
@@ -381,15 +368,57 @@ impl App {
     }
 }
 
-fn with_suspended_tui<F, T>(terminal: &mut DefaultTerminal, f: F) -> anyhow::Result<T>
+fn with_suspended_tui<F, T>(
+    key_reader_paused: &AtomicBool,
+    terminal: &mut DefaultTerminal,
+    f: F,
+) -> anyhow::Result<T>
 where
     F: FnOnce() -> anyhow::Result<T>,
 {
+    // Stop the key-reader thread from consuming input while the external program
+    // owns the terminal.
+    key_reader_paused.store(true, Ordering::SeqCst);
     std::io::stdout().execute(LeaveAlternateScreen)?;
     disable_raw_mode()?;
     let result = f();
     std::io::stdout().execute(EnterAlternateScreen)?;
     enable_raw_mode()?;
     terminal.clear()?;
+    key_reader_paused.store(false, Ordering::SeqCst);
     result
+}
+
+/// Spawn a dedicated OS thread that reads terminal input and forwards key-press
+/// events into the unified `Msg` channel. Reading continuously on its own thread
+/// means crossterm's input buffer is always drained, so fast keystrokes are never
+/// dropped (the previous async-`select!` approach could cancel a pending read).
+fn spawn_key_reader(sender: mpsc::UnboundedSender<msg::Msg>, paused: Arc<AtomicBool>) {
+    use crossterm::event::{self, Event, KeyEventKind};
+    use std::time::Duration;
+
+    std::thread::spawn(move || {
+        loop {
+            if paused.load(Ordering::SeqCst) {
+                std::thread::sleep(Duration::from_millis(20));
+                continue;
+            }
+
+            // Short poll timeout so the pause flag is observed promptly instead
+            // of blocking indefinitely in `read()`.
+            match event::poll(Duration::from_millis(100)) {
+                Ok(true) => match event::read() {
+                    Ok(Event::Key(key)) if key.kind == KeyEventKind::Press => {
+                        if sender.send(msg::Msg::KeyPressed(key)).is_err() {
+                            break; // receiver dropped — app is exiting
+                        }
+                    }
+                    Ok(_) => {}
+                    Err(_) => break,
+                },
+                Ok(false) => {}
+                Err(_) => break,
+            }
+        }
+    });
 }

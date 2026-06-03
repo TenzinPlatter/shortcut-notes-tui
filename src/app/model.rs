@@ -2,7 +2,10 @@ use throbber_widgets_tui::ThrobberState;
 use tokio::task::JoinHandle;
 use tui_scrollview::ScrollViewState;
 
-use std::{collections::HashMap, path::PathBuf};
+use std::{
+    collections::{HashMap, HashSet},
+    path::PathBuf,
+};
 
 use uuid::Uuid;
 
@@ -193,6 +196,27 @@ pub struct AddTodoModalState {
 #[derive(Clone, Debug, Default)]
 pub struct TodosListState {
     pub selected_id: Option<Uuid>,
+    /// Ids of todos to keep rendering even once completed: every todo that was
+    /// incomplete when the TUI opened, has appeared since, or was completed
+    /// during this session. Completed todos absent from this set (e.g. note
+    /// checkboxes ticked off in a past session) are hidden. Reset each launch.
+    pub visible: HashSet<Uuid>,
+}
+
+impl TodosListState {
+    /// Record every currently-incomplete todo as visible and drop ids that no
+    /// longer exist. Call whenever the todo list is loaded or reloaded.
+    pub fn refresh_visible(&mut self, todos: &[Todo]) {
+        self.visible.retain(|id| todos.iter().any(|t| &t.id == id));
+        for todo in todos.iter().filter(|t| !t.completed) {
+            self.visible.insert(todo.id);
+        }
+    }
+
+    /// Whether this todo should be rendered and navigable.
+    pub fn is_visible(&self, todo: &Todo) -> bool {
+        !todo.completed || self.visible.contains(&todo.id)
+    }
 }
 
 impl StoryListState {
@@ -227,6 +251,7 @@ impl Model {
         };
         model.ui.story_list.selected_story_id = model.data.stories.first().map(|s| s.id);
         model.ui.epic_list.selected_id = model.data.epics.first().map(|e| e.id);
+        model.ui.todos_list.refresh_visible(&model.data.todos);
         model
     }
 }
