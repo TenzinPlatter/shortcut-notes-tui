@@ -140,19 +140,9 @@ pub struct UiState {
     pub throbber_state: ThrobberState,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct IterationListState {
-    pub selected_id: Option<i32>,
-    pub search_query: String,
-    pub search_active: bool,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct EpicListState {
-    pub selected_id: Option<i32>,
-    pub search_query: String,
-    pub search_active: bool,
-}
+// Epic and iteration panes share the same fuzzy-searchable list state.
+pub use crate::app::pane::searchable_list::SearchListState as IterationListState;
+pub use crate::app::pane::searchable_list::SearchListState as EpicListState;
 
 #[derive(Clone, Debug)]
 pub struct StoryListState {

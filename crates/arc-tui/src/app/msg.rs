@@ -63,29 +63,9 @@ pub enum NotesListMsg {
     OpenNote,
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum IterationListMsg {
-    FocusNext,
-    FocusPrev,
-    OpenNote,
-    ActivateSearch,
-    DeactivateSearch,
-    SearchInput(char),
-    SearchBackspace,
-    ClearSearch,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum EpicListMsg {
-    FocusNext,
-    FocusPrev,
-    OpenNote,
-    ActivateSearch,
-    DeactivateSearch,
-    SearchInput(char),
-    SearchBackspace,
-    ClearSearch,
-}
+// Epic and iteration panes share one message type (searchable list).
+pub use crate::app::pane::searchable_list::SearchListMsg as IterationListMsg;
+pub use crate::app::pane::searchable_list::SearchListMsg as EpicListMsg;
 
 #[derive(Debug, Clone)]
 pub enum DescriptionModalMsg {

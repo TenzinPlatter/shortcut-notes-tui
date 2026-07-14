@@ -5,5 +5,6 @@ pub mod description_modal;
 pub mod epic_list;
 pub mod iteration_list;
 pub mod notes_list;
+pub mod searchable_list;
 pub mod story_list;
 pub mod todos_list;

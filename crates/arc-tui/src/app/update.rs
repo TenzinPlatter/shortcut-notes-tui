@@ -7,7 +7,7 @@ use crate::{
         cmd::Cmd,
         model::{LoadingState, ViewType},
         msg::{AddTodoModalMsg, CreateNoteModalMsg, EpicListMsg, IterationListMsg, Msg},
-        pane::{action_menu, add_todo_modal, create_note_modal, description_modal, epic_list, iteration_list, notes_list, story_list, todos_list},
+        pane::{action_menu, add_todo_modal, create_note_modal, description_modal, epic_list, iteration_list, notes_list, searchable_list, story_list, todos_list},
     },
     error::ErrorInfo,
     keybindings::Key,
@@ -220,54 +220,24 @@ impl App {
     /// - **Inactive with query** (`search_active = false`, query non-empty): list is
     ///   filtered but navigation works normally. Esc clears the query entirely.
     fn try_handle_search_key(&mut self, key: KeyEvent) -> Option<Vec<Cmd>> {
-        let (search_active, has_query) = match self.model.ui.active_view {
-            ViewType::Iterations => (
-                self.model.ui.iteration_list.search_active,
-                !self.model.ui.iteration_list.search_query.is_empty(),
-            ),
-            ViewType::Epics => (
-                self.model.ui.epic_list.search_active,
-                !self.model.ui.epic_list.search_query.is_empty(),
-            ),
+        let state = match self.model.ui.active_view {
+            ViewType::Iterations => &self.model.ui.iteration_list,
+            ViewType::Epics => &self.model.ui.epic_list,
             _ => return None,
         };
 
-        if search_active {
-            let msg = match key.code {
-                // Enter still opens the selected item
-                KeyCode::Enter => return None,
-                // Esc: exit typing mode, keep query so the list stays filtered
-                KeyCode::Esc => match self.model.ui.active_view {
-                    ViewType::Iterations => Msg::IterationList(IterationListMsg::DeactivateSearch),
-                    ViewType::Epics => Msg::EpicList(EpicListMsg::DeactivateSearch),
-                    _ => unreachable!(),
-                },
-                KeyCode::Backspace => match self.model.ui.active_view {
-                    ViewType::Iterations => Msg::IterationList(IterationListMsg::SearchBackspace),
-                    ViewType::Epics => Msg::EpicList(EpicListMsg::SearchBackspace),
-                    _ => unreachable!(),
-                },
-                KeyCode::Char(c) => match self.model.ui.active_view {
-                    ViewType::Iterations => Msg::IterationList(IterationListMsg::SearchInput(c)),
-                    ViewType::Epics => Msg::EpicList(EpicListMsg::SearchInput(c)),
-                    _ => unreachable!(),
-                },
-                _ => return Some(vec![Cmd::None]),
-            };
-            return Some(self.update(msg));
+        match searchable_list::search_key(key.code, state.search_active, !state.search_query.is_empty()) {
+            searchable_list::SearchKey::Passthrough => None,
+            searchable_list::SearchKey::Consume => Some(vec![Cmd::None]),
+            searchable_list::SearchKey::Msg(list_msg) => {
+                let msg = match self.model.ui.active_view {
+                    ViewType::Iterations => Msg::IterationList(list_msg),
+                    ViewType::Epics => Msg::EpicList(list_msg),
+                    _ => return None,
+                };
+                Some(self.update(msg))
+            }
         }
-
-        // Search inactive but query still set: Esc clears it, everything else passes through
-        if has_query && key.code == KeyCode::Esc {
-            let msg = match self.model.ui.active_view {
-                ViewType::Iterations => Msg::IterationList(IterationListMsg::ClearSearch),
-                ViewType::Epics => Msg::EpicList(EpicListMsg::ClearSearch),
-                _ => unreachable!(),
-            };
-            return Some(self.update(msg));
-        }
-
-        None
     }
 
     fn handle_key_input(&mut self, key: KeyEvent) -> Vec<Cmd> {
