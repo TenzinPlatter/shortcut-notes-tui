@@ -3,8 +3,8 @@ use std::path::Path;
 use anyhow::Result;
 use uuid::Uuid;
 
-use crate::scanner::ParsedTodo;
-use crate::todos::{Todo, TodoSource, modify_with_lock};
+use arc_notes::scanner::ParsedTodo;
+use arc_notes::todos::{Todo, TodoSource, modify_with_lock};
 
 /// Merge note-parsed todos for `file` into the on-disk store.
 ///
@@ -110,7 +110,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let cache = tmp.path();
 
-        crate::todos::save_todos(
+        arc_notes::todos::save_todos(
             cache,
             &[Todo::new_manual(
                 "manual one".to_string(),

@@ -7,9 +7,9 @@ use tokio::sync::mpsc;
 use tracing::{error, info, warn};
 
 use arc_core::config::Config;
-use crate::daemon::scheduler::{DBusNotifier, ScheduledTodo, Scheduler, SystemClock};
-use crate::daemon::watcher::WatchEvent;
-use crate::todos::TodoSource;
+use crate::scheduler::{DBusNotifier, ScheduledTodo, Scheduler, SystemClock};
+use crate::watcher::WatchEvent;
+use arc_notes::todos::TodoSource;
 
 pub mod install;
 pub mod scheduler;
@@ -89,7 +89,7 @@ async fn bootstrap_scan(notes_dir: &Path, cache_dir: &Path) -> Result<()> {
                 continue;
             }
         };
-        let parsed = crate::scanner::parse_note(&content, &rel);
+        let parsed = arc_notes::scanner::parse_note(&content, &rel);
         if let Err(e) = store::merge_file(cache_dir, &rel, parsed).await {
             warn!("merge {} failed: {e:#}", rel.display());
         }
@@ -157,7 +157,7 @@ async fn handle_event(
                 return Ok(());
             }
         };
-        let parsed = crate::scanner::parse_note(&content, &rel);
+        let parsed = arc_notes::scanner::parse_note(&content, &rel);
         let _ = store::merge_file(&config.cache_dir, &rel, parsed).await?;
     }
     rebuild_schedule(&config.cache_dir, sched).await?;
@@ -165,7 +165,7 @@ async fn handle_event(
 }
 
 async fn rebuild_schedule(cache_dir: &Path, sched: &mut Scheduler) -> Result<()> {
-    let todos = crate::todos::load_todos(cache_dir).await;
+    let todos = arc_notes::todos::load_todos(cache_dir).await;
     // Cancel everything we know about, then re-insert.
     sched.clear();
     for t in todos {

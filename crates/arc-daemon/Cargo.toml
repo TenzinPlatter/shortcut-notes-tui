@@ -1,0 +1,19 @@
+[package]
+name = "arc-daemon"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+arc-core = { workspace = true }
+arc-notes = { workspace = true }
+anyhow = { workspace = true }
+chrono = { workspace = true }
+notify = { workspace = true }
+notify-rust = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

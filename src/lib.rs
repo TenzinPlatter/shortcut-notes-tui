@@ -25,7 +25,6 @@ pub use arc_notes::{note, scanner, todos};
 pub mod app;
 pub mod cli;
 pub mod custom_list;
-pub mod daemon;
 pub mod dummy;
 pub mod error;
 pub mod keybindings;
@@ -149,8 +148,8 @@ pub async fn handle_command(
         }
 
         Commands::Daemon(daemon_cmd) => match daemon_cmd {
-            DaemonCommands::Run => crate::daemon::run(config.clone()).await,
-            DaemonCommands::Install => crate::daemon::install::install(),
+            DaemonCommands::Run => arc_daemon::run(config.clone()).await,
+            DaemonCommands::Install => arc_daemon::install::install(),
         },
 
         Commands::Migrate => unreachable!("Migrate is handled in main.rs before config is loaded"),

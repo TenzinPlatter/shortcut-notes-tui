@@ -46,11 +46,13 @@ regex = "1"
 arc-core = { path = "crates/arc-core" }
 arc-shortcut = { path = "crates/arc-shortcut" }
 arc-notes = { path = "crates/arc-notes" }
+arc-daemon = { path = "crates/arc-daemon" }
 
 [dependencies]
 arc-core = { workspace = true }
 arc-shortcut = { workspace = true }
 arc-notes = { workspace = true }
+arc-daemon = { workspace = true }
 anyhow = { workspace = true }
 chrono = { workspace = true }
 clap = { workspace = true }
