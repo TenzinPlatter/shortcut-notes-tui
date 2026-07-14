@@ -19,9 +19,9 @@ use crate::{
 };
 use arc_core::Config;
 
-pub mod api;
+pub use arc_shortcut::{api, cache};
+
 pub mod app;
-pub mod cache;
 pub mod cli;
 pub mod custom_list;
 pub mod daemon;

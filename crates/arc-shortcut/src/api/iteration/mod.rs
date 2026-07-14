@@ -2,10 +2,7 @@ use chrono::NaiveDate;
 use futures::future::join_all;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    api::{ApiClient, story::Story},
-    custom_list::LinearListItem,
-};
+use crate::api::{ApiClient, story::Story};
 use arc_core::dbg_file;
 
 #[derive(Deserialize, Serialize, Clone, Copy, Debug, PartialEq, Eq)]
@@ -24,11 +21,6 @@ pub struct Iteration {
     pub end_date: NaiveDate,
     pub app_url: String,
     pub status: IterationStatus,
-}
-
-impl LinearListItem for Iteration {
-    fn id(&self) -> i32 { self.id }
-    fn label(&self) -> &str { &self.name }
 }
 
 impl ApiClient {

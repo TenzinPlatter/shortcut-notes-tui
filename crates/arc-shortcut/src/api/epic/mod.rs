@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{api::ApiClient, custom_list::LinearListItem};
+use crate::api::ApiClient;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct EpicSlim {
@@ -21,11 +21,6 @@ pub struct Epic {
     pub name: String,
     pub owner_ids: Vec<Uuid>,
     pub started: bool,
-}
-
-impl LinearListItem for EpicSlim {
-    fn id(&self) -> i32 { self.id }
-    fn label(&self) -> &str { &self.name }
 }
 
 impl ApiClient {

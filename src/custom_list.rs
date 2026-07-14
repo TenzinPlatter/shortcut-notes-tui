@@ -13,6 +13,16 @@ pub trait LinearListItem {
     fn label(&self) -> &str;
 }
 
+impl LinearListItem for arc_shortcut::api::iteration::Iteration {
+    fn id(&self) -> i32 { self.id }
+    fn label(&self) -> &str { &self.name }
+}
+
+impl LinearListItem for arc_shortcut::api::epic::EpicSlim {
+    fn id(&self) -> i32 { self.id }
+    fn label(&self) -> &str { &self.name }
+}
+
 /// A simple, bordered linear list widget with selection highlighting and dividers.
 pub struct LinearList<'a, T: LinearListItem> {
     pub items: &'a [T],

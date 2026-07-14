@@ -44,9 +44,11 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 regex = "1"
 arc-core = { path = "crates/arc-core" }
+arc-shortcut = { path = "crates/arc-shortcut" }
 
 [dependencies]
 arc-core = { workspace = true }
+arc-shortcut = { workspace = true }
 anyhow = { workspace = true }
 chrono = { workspace = true }
 clap = { workspace = true }
