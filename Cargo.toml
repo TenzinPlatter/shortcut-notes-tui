@@ -43,9 +43,11 @@ notify-rust = "4"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 regex = "1"
+rusqlite = { version = "0.40", features = ["bundled"] }
 arc-core = { path = "crates/arc-core" }
 arc-shortcut = { path = "crates/arc-shortcut" }
 arc-notes = { path = "crates/arc-notes" }
+arc-index = { path = "crates/arc-index" }
 arc-daemon = { path = "crates/arc-daemon" }
 arc-tui = { path = "crates/arc-tui" }
 

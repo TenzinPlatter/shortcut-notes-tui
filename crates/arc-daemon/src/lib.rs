@@ -25,8 +25,11 @@ pub async fn run(config: Config) -> Result<()> {
         std::fs::create_dir_all(&config.notes_dir)?;
     }
 
+    // Queryable index (writer connection; lives for the daemon's lifetime).
+    let mut index = arc_index::open(&config.cache_dir)?;
+
     // Bootstrap: full scan.
-    bootstrap_scan(&config.notes_dir, &config.cache_dir).await?;
+    bootstrap_scan(&config.notes_dir, &config.cache_dir, &mut index).await?;
 
     // Spawn the watcher.
     let (tx, mut rx) = mpsc::unbounded_channel::<WatchEvent>();
@@ -57,7 +60,7 @@ pub async fn run(config: Config) -> Result<()> {
                     warn!("watcher channel closed; exiting");
                     return Ok(());
                 };
-                if let Err(e) = handle_event(&config, &mut sched, event).await {
+                if let Err(e) = handle_event(&config, &mut sched, &mut index, event).await {
                     error!("event handling failed: {e:#}");
                 }
             }
@@ -77,7 +80,11 @@ fn init_tracing() {
         .try_init();
 }
 
-async fn bootstrap_scan(notes_dir: &Path, cache_dir: &Path) -> Result<()> {
+async fn bootstrap_scan(
+    notes_dir: &Path,
+    cache_dir: &Path,
+    index: &mut arc_index::Connection,
+) -> Result<()> {
     let files = list_markdown(notes_dir)?;
     info!("bootstrap: scanning {} note files", files.len());
     for abs in files {
@@ -93,8 +100,20 @@ async fn bootstrap_scan(notes_dir: &Path, cache_dir: &Path) -> Result<()> {
         if let Err(e) = store::merge_file(cache_dir, &rel, parsed).await {
             warn!("merge {} failed: {e:#}", rel.display());
         }
+        if let Err(e) = arc_index::reindex_note(index, &rel, &content) {
+            warn!("index {} failed: {e:#}", rel.display());
+        }
     }
+    mirror_todos(cache_dir, index).await;
     Ok(())
+}
+
+/// Refresh the read-only todo mirror from the authoritative `todos.json`.
+async fn mirror_todos(cache_dir: &Path, index: &mut arc_index::Connection) {
+    let todos = arc_notes::todos::load_todos(cache_dir).await;
+    if let Err(e) = arc_index::mirror_todos(index, &todos) {
+        warn!("todo mirror failed: {e:#}");
+    }
 }
 
 fn list_markdown(dir: &Path) -> Result<Vec<PathBuf>> {
@@ -124,6 +143,7 @@ fn list_markdown(dir: &Path) -> Result<Vec<PathBuf>> {
 async fn handle_event(
     config: &Config,
     sched: &mut Scheduler,
+    index: &mut arc_index::Connection,
     event: WatchEvent,
 ) -> Result<()> {
     let (abs, removed) = match event {
@@ -143,12 +163,15 @@ async fn handle_event(
 
     if treat_as_removed {
         let _ = store::drop_file(&config.cache_dir, &rel).await?;
+        let _ = arc_index::remove_note(index, &rel);
     } else {
         let content = match std::fs::read_to_string(&abs) {
             Ok(c) => c,
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
                 // Raced with delete/rename — treat as removal.
                 let _ = store::drop_file(&config.cache_dir, &rel).await?;
+                let _ = arc_index::remove_note(index, &rel);
+                mirror_todos(&config.cache_dir, index).await;
                 rebuild_schedule(&config.cache_dir, sched).await?;
                 return Ok(());
             }
@@ -159,7 +182,11 @@ async fn handle_event(
         };
         let parsed = arc_notes::scanner::parse_note(&content, &rel);
         let _ = store::merge_file(&config.cache_dir, &rel, parsed).await?;
+        if let Err(e) = arc_index::reindex_note(index, &rel, &content) {
+            warn!("index {} failed: {e:#}", rel.display());
+        }
     }
+    mirror_todos(&config.cache_dir, index).await;
     rebuild_schedule(&config.cache_dir, sched).await?;
     Ok(())
 }
