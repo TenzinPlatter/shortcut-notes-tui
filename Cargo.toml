@@ -47,42 +47,16 @@ arc-core = { path = "crates/arc-core" }
 arc-shortcut = { path = "crates/arc-shortcut" }
 arc-notes = { path = "crates/arc-notes" }
 arc-daemon = { path = "crates/arc-daemon" }
+arc-tui = { path = "crates/arc-tui" }
 
 [dependencies]
 arc-core = { workspace = true }
-arc-shortcut = { workspace = true }
-arc-notes = { workspace = true }
-arc-daemon = { workspace = true }
+arc-tui = { workspace = true }
 anyhow = { workspace = true }
-chrono = { workspace = true }
 clap = { workspace = true }
-confy = { workspace = true }
-crossterm = { workspace = true }
-futures = { workspace = true }
 ratatui = { workspace = true }
-reqwest = { workspace = true }
-serde = { workspace = true }
-serde_json = { workspace = true }
-serde_yaml = { workspace = true }
 shellexpand = { workspace = true }
-textwrap = { workspace = true }
-slugify = { workspace = true }
 tokio = { workspace = true }
-uuid = { workspace = true }
-unicode-ellipsis = { workspace = true }
-tempfile = { workspace = true }
-which = { workspace = true }
-throbber-widgets-tui = { workspace = true }
-tui-scrollview = { workspace = true }
-tui-widget-list = { workspace = true }
-open = { workspace = true }
-fuzzy-matcher = { workspace = true }
-fs2 = { workspace = true }
-notify = { workspace = true }
-notify-rust = { workspace = true }
-tracing = { workspace = true }
-tracing-subscriber = { workspace = true }
-regex = { workspace = true }
 
 [profile.release]
 opt-level = "s"

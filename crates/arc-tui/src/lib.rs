@@ -28,7 +28,6 @@ pub mod custom_list;
 pub mod dummy;
 pub mod error;
 pub mod keybindings;
-pub mod migrate;
 pub mod text_utils;
 pub mod tmux;
 pub mod view;

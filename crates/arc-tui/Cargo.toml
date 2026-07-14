@@ -1,0 +1,32 @@
+[package]
+name = "arc-tui"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+arc-core = { workspace = true }
+arc-shortcut = { workspace = true }
+arc-notes = { workspace = true }
+arc-daemon = { workspace = true }
+anyhow = { workspace = true }
+chrono = { workspace = true }
+clap = { workspace = true }
+crossterm = { workspace = true }
+notify = { workspace = true }
+futures = { workspace = true }
+fuzzy-matcher = { workspace = true }
+open = { workspace = true }
+ratatui = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+slugify = { workspace = true }
+tempfile = { workspace = true }
+textwrap = { workspace = true }
+throbber-widgets-tui = { workspace = true }
+tokio = { workspace = true }
+tui-scrollview = { workspace = true }
+tui-widget-list = { workspace = true }
+unicode-ellipsis = { workspace = true }
+uuid = { workspace = true }
+which = { workspace = true }

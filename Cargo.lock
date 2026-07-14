@@ -88,38 +88,11 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "arc-core",
- "arc-daemon",
- "arc-notes",
- "arc-shortcut",
- "chrono",
+ "arc-tui",
  "clap",
- "confy",
- "crossterm",
- "fs2",
- "futures",
- "fuzzy-matcher",
- "notify",
- "notify-rust",
- "open",
  "ratatui",
- "regex",
- "reqwest",
- "serde",
- "serde_json",
- "serde_yaml",
  "shellexpand",
- "slugify",
- "tempfile",
- "textwrap",
- "throbber-widgets-tui",
  "tokio",
- "tracing",
- "tracing-subscriber",
- "tui-scrollview",
- "tui-widget-list",
- "unicode-ellipsis",
- "uuid",
- "which",
 ]
 
 [[package]]
@@ -182,6 +155,38 @@ dependencies = [
  "slugify",
  "tokio",
  "uuid",
+]
+
+[[package]]
+name = "arc-tui"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "arc-core",
+ "arc-daemon",
+ "arc-notes",
+ "arc-shortcut",
+ "chrono",
+ "clap",
+ "crossterm",
+ "futures",
+ "fuzzy-matcher",
+ "notify",
+ "open",
+ "ratatui",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "slugify",
+ "tempfile",
+ "textwrap",
+ "throbber-widgets-tui",
+ "tokio",
+ "tui-scrollview",
+ "tui-widget-list",
+ "unicode-ellipsis",
+ "uuid",
+ "which",
 ]
 
 [[package]]
