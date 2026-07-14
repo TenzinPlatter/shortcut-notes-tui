@@ -1,5 +1,7 @@
 use std::path::{Path, PathBuf};
 
+use slugify::slugify;
+
 use crate::note::frontmatter::Frontmatter;
 
 pub mod frontmatter;
@@ -17,13 +19,12 @@ impl Note {
         story_app_url: String,
         iteration_app_url: Option<String>,
     ) -> Self {
-        let frontmatter = Frontmatter::new(story_id, story_name, story_app_url, iteration_app_url);
+        let slug = slugify!(&story_name);
+        let frontmatter =
+            Frontmatter::story(slug.clone(), story_id, story_name, story_app_url, iteration_app_url);
         let mut path = PathBuf::from(notes_dir.as_ref());
-        // TODO: date + don't create a new note at each time
-        // path.push(format!("{}", now.year()));
-        // path.push(format!("{}", now.month()));
         path.push("stories");
-        path.push(format!("{}.md", &frontmatter.slug_id));
+        path.push(format!("{slug}.md"));
 
         Self { frontmatter, path }
     }

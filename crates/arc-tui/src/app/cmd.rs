@@ -1,14 +1,16 @@
-use std::fs::File;
-use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::{
-    fs::{OpenOptions, create_dir_all, read_to_string},
+    fs::{File, create_dir_all, read_to_string},
     process::Command,
 };
 
 use slugify::slugify;
 
-use crate::{api::story::Story, note::Note, tmux, zellij};
+use crate::{
+    api::story::Story,
+    note::{Note, frontmatter::Frontmatter},
+    tmux, zellij,
+};
 use arc_core::{Config, Mux, dbg_file};
 
 #[derive(Debug, Clone)]
@@ -90,6 +92,19 @@ pub fn open_in_editor(config: &Config, path: &Path) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Write `fm`'s frontmatter block iff the note is new or empty, then open it in
+/// the editor. Single write path for every note type.
+fn open_with_frontmatter(config: &Config, path: &Path, fm: Frontmatter) -> anyhow::Result<()> {
+    if let Some(p) = path.parent() {
+        create_dir_all(p)?;
+    }
+    let empty = !path.is_file() || read_to_string(path)?.is_empty();
+    if empty {
+        std::fs::write(path, fm.to_block()?)?;
+    }
+    open_in_editor(config, path)
+}
+
 pub fn open_note_in_editor(
     story_id: i32,
     story_name: String,
@@ -104,25 +119,7 @@ pub fn open_note_in_editor(
         story_app_url,
         iteration_app_url,
     );
-
-    if let Some(p) = note.path.parent() {
-        create_dir_all(p)?;
-    }
-
-    let needs_frontmatter = if note.path.is_file() {
-        read_to_string(&note.path)?.is_empty()
-    } else {
-        true
-    };
-
-    if needs_frontmatter {
-        let frontmatter_string = format!("---\n{}---", note.frontmatter.to_yaml_string()?);
-        std::fs::write(&note.path, frontmatter_string)?;
-    }
-
-    open_in_editor(config, &note.path)?;
-
-    Ok(())
+    open_with_frontmatter(config, &note.path, note.frontmatter)
 }
 
 pub fn open_iteration_note_in_editor(
@@ -134,32 +131,9 @@ pub fn open_iteration_note_in_editor(
     let slug = slugify!(&iteration_name);
     let mut path = config.notes_dir.clone();
     path.push("iterations");
-    path.push(format!("{}.md", slug));
-
-    if path.is_dir() {
-        anyhow::bail!("Note path: {} is not a file", path.display());
-    }
-    if let Some(p) = path.parent() {
-        create_dir_all(p)?;
-    }
-
-    let mut f = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .read(true)
-        .open(&path)?;
-    let buf = read_to_string(&path)?;
-    if buf.is_empty() {
-        let today = arc_core::time::today();
-        let frontmatter = format!(
-            "---\niteration_id: it-{}\niteration_link: {}\niteration_name: {}\ncreated: {}\n---\n",
-            iteration_id, iteration_app_url, iteration_name, today
-        );
-        f.write_all(frontmatter.as_bytes())?;
-    }
-
-    Command::new(&config.editor).arg(&path).status()?;
-    Ok(())
+    path.push(format!("{slug}.md"));
+    let fm = Frontmatter::iteration(slug, iteration_id, iteration_name, iteration_app_url);
+    open_with_frontmatter(config, &path, fm)
 }
 
 pub fn open_epic_note_in_editor(
@@ -171,93 +145,28 @@ pub fn open_epic_note_in_editor(
     let slug = slugify!(&epic_name);
     let mut path = config.notes_dir.clone();
     path.push("epics");
-    path.push(format!("{}.md", slug));
-
-    if path.is_dir() {
-        anyhow::bail!("Note path: {} is not a file", path.display());
-    }
-    if let Some(p) = path.parent() {
-        create_dir_all(p)?;
-    }
-
-    let mut f = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .read(true)
-        .open(&path)?;
-    let buf = read_to_string(&path)?;
-    if buf.is_empty() {
-        let today = arc_core::time::today();
-        let frontmatter = format!(
-            "---\nepic_id: ep-{}\nepic_link: {}\nepic_name: {}\ncreated: {}\n---\n",
-            epic_id, epic_app_url, epic_name, today
-        );
-        f.write_all(frontmatter.as_bytes())?;
-    }
-
-    Command::new(&config.editor).arg(&path).status()?;
-    Ok(())
+    path.push(format!("{slug}.md"));
+    let fm = Frontmatter::epic(slug, epic_id, epic_name, epic_app_url);
+    open_with_frontmatter(config, &path, fm)
 }
 
 pub fn open_daily_note_with_frontmatter(config: &Config, path: &Path) -> anyhow::Result<()> {
-    if path.is_dir() {
-        anyhow::bail!("Note path: {} is not a file", path.display());
-    }
-
-    if let Some(p) = path.parent() {
-        create_dir_all(p)?;
-    }
-
-    // Write frontmatter if file is new or empty
-    let needs_frontmatter = if path.is_file() {
-        read_to_string(path)?.is_empty()
-    } else {
-        true
-    };
-
-    if needs_frontmatter {
-        let today = arc_core::time::today();
-        let frontmatter = format!("---\ncreated: {}\ntype: daily\n---\n", today);
-        let mut f = File::create(path)?;
-        f.write_all(frontmatter.as_bytes())?;
-    }
-
     dbg_file!("Opening daily note in editor: {}", path.display());
-
-    let res = Command::new(&config.editor).arg(path).status()?;
-    if !res.success() {
-        anyhow::bail!("Failed to open {} in editor", path.display());
-    }
-
-    Ok(())
+    let slug = file_stem(path);
+    open_with_frontmatter(config, path, Frontmatter::daily(slug))
 }
 
-pub fn open_scratch_note_in_editor(name: &str, path: &Path, config: &Config) -> anyhow::Result<()> {
-    if path.is_dir() {
-        anyhow::bail!("Note path: {} is not a file", path.display());
-    }
+pub fn open_scratch_note_in_editor(_name: &str, path: &Path, config: &Config) -> anyhow::Result<()> {
+    let slug = file_stem(path);
+    open_with_frontmatter(config, path, Frontmatter::scratch(slug))
+}
 
-    if let Some(p) = path.parent() {
-        create_dir_all(p)?;
-    }
-
-    let needs_frontmatter = if path.is_file() {
-        read_to_string(path)?.is_empty()
-    } else {
-        true
-    };
-
-    if needs_frontmatter {
-        let today = arc_core::time::today();
-        let frontmatter = format!(
-            "---\nname: {}\ncreated: {}\ntype: scratch\n---\n",
-            name, today
-        );
-        let mut f = File::create(path)?;
-        f.write_all(frontmatter.as_bytes())?;
-    }
-
-    open_in_editor(config, path)
+/// Obsidian's `id` is the filename stem.
+fn file_stem(path: &Path) -> String {
+    path.file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or_default()
+        .to_string()
 }
 
 pub async fn open_mux_session(name: &str, mux: &Mux) -> anyhow::Result<()> {
