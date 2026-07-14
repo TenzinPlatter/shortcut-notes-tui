@@ -5,7 +5,7 @@ use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use uuid::Uuid;
 
 use crate::{
-    app::{cmd::Cmd, msg::TodosListMsg},
+    app::{cmd::Cmd, msg::TodosListMsg, pane::nav},
     todos::Todo,
 };
 
@@ -130,6 +130,7 @@ pub fn group_todos_by_section(todos: &[Todo], today: NaiveDate) -> GroupedTodos 
     }
 }
 
+/// Section + within-section index of a todo. Used for section-level jumps.
 fn find_todo_position(todo_id: Uuid, sections: &[DaySection]) -> Option<(usize, usize)> {
     for (section_idx, section) in sections.iter().enumerate() {
         if let Some(todo_idx) = section.todos.iter().position(|t| t.id == todo_id) {
@@ -139,34 +140,20 @@ fn find_todo_position(todo_id: Uuid, sections: &[DaySection]) -> Option<(usize, 
     None
 }
 
-fn next_todo_id(current_id: Uuid, sections: &[DaySection]) -> Option<Uuid> {
-    if sections.is_empty() {
-        return None;
-    }
-    let (section_idx, todo_idx) = find_todo_position(current_id, sections)?;
+/// Ids of all todos across sections, in display order.
+fn ordered_ids(sections: &[DaySection]) -> Vec<Uuid> {
+    sections
+        .iter()
+        .flat_map(|s| s.todos.iter().map(|t| t.id))
+        .collect()
+}
 
-    if todo_idx + 1 < sections[section_idx].todos.len() {
-        return Some(sections[section_idx].todos[todo_idx + 1].id);
-    }
-    if section_idx + 1 < sections.len() {
-        return sections[section_idx + 1].todos.first().map(|t| t.id);
-    }
-    sections.first()?.todos.first().map(|t| t.id)
+fn next_todo_id(current_id: Uuid, sections: &[DaySection]) -> Option<Uuid> {
+    nav::step_wrapping(&ordered_ids(sections), current_id, true)
 }
 
 fn prev_todo_id(current_id: Uuid, sections: &[DaySection]) -> Option<Uuid> {
-    if sections.is_empty() {
-        return None;
-    }
-    let (section_idx, todo_idx) = find_todo_position(current_id, sections)?;
-
-    if todo_idx > 0 {
-        return Some(sections[section_idx].todos[todo_idx - 1].id);
-    }
-    if section_idx > 0 {
-        return sections[section_idx - 1].todos.last().map(|t| t.id);
-    }
-    sections.last()?.todos.last().map(|t| t.id)
+    nav::step_wrapping(&ordered_ids(sections), current_id, false)
 }
 
 /// Sections built from only the todos that should currently be shown (incomplete,

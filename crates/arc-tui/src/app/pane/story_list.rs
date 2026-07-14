@@ -7,7 +7,7 @@ use crate::{
         iteration::Iteration,
         story::{Story, get_story_associated_iteration},
     },
-    app::{cmd::Cmd, msg::StoryListMsg},
+    app::{cmd::Cmd, msg::StoryListMsg, pane::nav},
     keybindings::Key,
 };
 use arc_core::dbg_file;
@@ -70,59 +70,20 @@ fn group_stories_by_iteration<'a>(
     sections
 }
 
-/// Find the position of a story within the grouped sections
-/// Returns (section_index, story_index_in_section)
-fn find_story_position(story_id: i32, sections: &[IterationSection]) -> Option<(usize, usize)> {
-    for (section_idx, section) in sections.iter().enumerate() {
-        if let Some(story_idx) = section.stories.iter().position(|s| s.id == story_id) {
-            return Some((section_idx, story_idx));
-        }
-    }
-    None
+/// Ids of all stories across sections, in display order.
+fn ordered_ids(sections: &[IterationSection]) -> Vec<i32> {
+    sections
+        .iter()
+        .flat_map(|s| s.stories.iter().map(|s| s.id))
+        .collect()
 }
 
-/// Get the next story ID when navigating down
 fn next_story_id(current_story_id: i32, sections: &[IterationSection]) -> Option<i32> {
-    if sections.is_empty() {
-        return None;
-    }
-
-    let (section_idx, story_idx) = find_story_position(current_story_id, sections)?;
-
-    // Try next story in same section
-    if story_idx + 1 < sections[section_idx].stories.len() {
-        return Some(sections[section_idx].stories[story_idx + 1].id);
-    }
-
-    // Try first story of next section
-    if section_idx + 1 < sections.len() {
-        return sections[section_idx + 1].stories.first().map(|s| s.id);
-    }
-
-    // Wrap to first story of first section
-    sections.first()?.stories.first().map(|s| s.id)
+    nav::step_wrapping(&ordered_ids(sections), current_story_id, true)
 }
 
-/// Get the previous story ID when navigating up
 fn prev_story_id(current_story_id: i32, sections: &[IterationSection]) -> Option<i32> {
-    if sections.is_empty() {
-        return None;
-    }
-
-    let (section_idx, story_idx) = find_story_position(current_story_id, sections)?;
-
-    // Try previous story in same section
-    if story_idx > 0 {
-        return Some(sections[section_idx].stories[story_idx - 1].id);
-    }
-
-    // Try last story of previous section
-    if section_idx > 0 {
-        return sections[section_idx - 1].stories.last().map(|s| s.id);
-    }
-
-    // Wrap to last story of last section
-    sections.last()?.stories.last().map(|s| s.id)
+    nav::step_wrapping(&ordered_ids(sections), current_story_id, false)
 }
 
 pub fn update(
