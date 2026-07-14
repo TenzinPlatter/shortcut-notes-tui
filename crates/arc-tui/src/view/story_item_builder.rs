@@ -8,13 +8,16 @@ use ratatui::{
 
 use crate::api::story::Story;
 
-/// Renders a single story item with divider at the bottom
+/// Renders a single story item with divider at the bottom. When it's the first
+/// story of an iteration group, an optional section header rides above it so
+/// the whole list can be one scrolling `ListView`.
 pub struct StoryItemWidget<'a> {
     story: &'a Story,
     is_active: bool,
     is_selected: bool,
     _width: u16,
     is_completed: bool,
+    header: Option<String>,
 }
 
 impl<'a> StoryItemWidget<'a> {
@@ -24,6 +27,7 @@ impl<'a> StoryItemWidget<'a> {
         is_selected: bool,
         width: u16,
         is_completed: bool,
+        header: Option<String>,
     ) -> Self {
         Self {
             story,
@@ -31,12 +35,13 @@ impl<'a> StoryItemWidget<'a> {
             is_selected,
             _width: width,
             is_completed,
+            header,
         }
     }
 
-    /// Calculate the total height including divider
+    /// Total height: story line + divider, plus a header row when present.
     pub fn height(&self) -> u16 {
-        2
+        2 + self.header.is_some() as u16
     }
 }
 
@@ -46,19 +51,31 @@ impl Widget for StoryItemWidget<'_> {
             return;
         }
 
-        // Render story content on first line
-        let content = self.render_story_line();
-        buf.set_line(area.x, area.y, &content, area.width);
+        // Optional section header on the first row.
+        let mut y = area.y;
+        if let Some(header) = &self.header {
+            let line = Line::from(format!(" ── {header} ──")).style(Style::default().dark_gray());
+            buf.set_line(area.x, y, &line, area.width);
+            y += 1;
+        }
+        if y >= area.y + area.height {
+            return;
+        }
 
-        // Render divider on second line
-        if area.height >= 2 {
+        // Render story content
+        let content = self.render_story_line();
+        buf.set_line(area.x, y, &content, area.width);
+        y += 1;
+
+        // Render divider below it
+        if y < area.y + area.height {
             let divider_style = if self.is_selected {
                 Style::default().fg(Color::Yellow)
             } else {
                 Style::default().dark_gray()
             };
             let divider = Line::from("─".repeat(area.width as usize)).style(divider_style);
-            buf.set_line(area.x, area.y + 1, &divider, area.width);
+            buf.set_line(area.x, y, &divider, area.width);
         }
     }
 }

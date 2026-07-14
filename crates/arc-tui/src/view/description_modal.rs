@@ -77,8 +77,9 @@ impl StatefulWidget for DescriptionModal<'_> {
 
 /// Calculate a centered rectangle with percentage-based sizing
 pub fn centered_rect(percent_x: u16, percent_y: u16, area: Rect) -> Rect {
-    let width = (area.width * percent_x) / 100;
-    let height = (area.height * percent_y) / 100;
+    // u32 math: `area.width * percent_x` overflows u16 past ~820 cols.
+    let width = (area.width as u32 * percent_x as u32 / 100) as u16;
+    let height = (area.height as u32 * percent_y as u32 / 100) as u16;
     let x = (area.width - width) / 2;
     let y = (area.height - height) / 2;
 

@@ -390,9 +390,13 @@ impl App {
 
         if self.model.ui.action_menu.is_showing {
             let (width, height) = ActionMenu::window_dimensions();
-            let (width, height) = (width as u16, height as u16);
-            let x = (frame.area().width - width) / 2;
-            let y = (frame.area().height - height) / 2;
+            let area = frame.area();
+            // Clamp to the frame so the centering subtraction can't underflow
+            // on a terminal smaller than the menu.
+            let width = (width as u16).min(area.width);
+            let height = (height as u16).min(area.height);
+            let x = (area.width - width) / 2;
+            let y = (area.height - height) / 2;
 
             let rect = Rect::new(x, y, width, height);
             ActionMenu.render(

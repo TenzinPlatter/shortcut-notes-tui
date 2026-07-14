@@ -1,6 +1,6 @@
 use ratatui::{
     buffer::Buffer,
-    layout::{Alignment, Constraint, Layout, Rect},
+    layout::{Alignment, Rect},
     style::{Color, Style},
     symbols::border,
     text::{Line, Span},
@@ -61,89 +61,61 @@ impl WidgetRef for TodosListView<'_> {
         let today = today();
         let sections = group_todos_by_section(&visible, today).ordered_sections();
 
-        // Calculate layout constraints for sections:
-        // header (1) + bordered list (items*2 + 4 for border+padding) + spacing (1)
-        let mut constraints = Vec::new();
-        for section in &sections {
-            constraints.push(Constraint::Length(1));
-            constraints.push(Constraint::Length((section.todos.len() * 2 + 4) as u16));
-            constraints.push(Constraint::Length(1));
+        // Flatten sections into one scrolling list; the first todo of each
+        // section carries its header, so the selection can't clip off-screen.
+        struct Row {
+            todo: Todo,
+            header: Option<String>,
         }
-
-        if !constraints.is_empty() {
-            constraints.pop();
-        }
-        constraints.push(Constraint::Min(0));
-
-        let section_areas = Layout::vertical(constraints).split(area);
-
-        let mut area_index = 0;
+        let mut rows: Vec<Row> = Vec::new();
         for section in &sections {
-            // Render section header
-            let header_area = section_areas[area_index];
-            area_index += 1;
-
-            let header_text = section.kind.header();
-
-            let header_style = Style::default().fg(Color::DarkGray);
-            let display = format!(" ── {} ──", header_text);
-            let title_line = Line::from(display).style(header_style);
-            buf.set_line(
-                header_area.x,
-                header_area.y,
-                &title_line,
-                header_area.width,
-            );
-
-            // Render bordered todos list
-            let list_area = section_areas[area_index];
-            area_index += 1;
-
-            let list_block = Block::bordered()
-                .border_set(border::THICK)
-                .padding(Padding::vertical(1));
-            let todos_area = list_block.inner(list_area);
-            list_block.render(list_area, buf);
-
-            let section_todos: Vec<_> = section.todos.clone();
-            let selected_id = self.state.selected_id;
-
-            let builder = ListBuilder::new(move |context| {
-                let todo = &section_todos[context.index];
-                let is_selected = selected_id.is_some_and(|id| id == todo.id);
-                let source_label = match &todo.source {
-                    crate::todos::TodoSource::NoteParsed { file, line, .. } => {
-                        let stem = file
-                            .file_stem()
-                            .and_then(|s| s.to_str())
-                            .unwrap_or("?");
-                        Some(format!(" [{}:{}]", stem, line))
-                    }
-                    crate::todos::TodoSource::Manual => None,
-                };
-                let widget = TodoItemWidget {
-                    text: todo.text.clone(),
-                    completed: todo.completed,
-                    is_selected,
-                    source_label,
-                };
-                (widget, 2)
-            });
-
-            let list = ListView::new(builder, section.todos.len());
-
-            let mut list_state = ListState::default();
-            if let Some(selected_id) = self.state.selected_id
-                && let Some(pos) = section.todos.iter().position(|t| t.id == selected_id)
-            {
-                list_state.select(Some(pos));
+            let header = section.kind.header().to_string();
+            for (i, todo) in section.todos.iter().enumerate() {
+                rows.push(Row {
+                    todo: todo.clone(),
+                    header: (i == 0).then(|| header.clone()),
+                });
             }
-
-            StatefulWidget::render(list, todos_area, buf, &mut list_state);
-
-            // Skip spacing area
-            area_index += 1;
         }
+
+        let list_block = Block::bordered()
+            .border_set(border::THICK)
+            .padding(Padding::vertical(1));
+        let todos_area = list_block.inner(area);
+        list_block.render(area, buf);
+
+        let selected_pos = self
+            .state
+            .selected_id
+            .and_then(|id| rows.iter().position(|r| r.todo.id == id));
+        let count = rows.len();
+
+        let builder = ListBuilder::new(move |context| {
+            let row = &rows[context.index];
+            let todo = &row.todo;
+            let is_selected = context.is_selected;
+            let source_label = match &todo.source {
+                crate::todos::TodoSource::NoteParsed { file, line, .. } => {
+                    let stem = file.file_stem().and_then(|s| s.to_str()).unwrap_or("?");
+                    Some(format!(" [{}:{}]", stem, line))
+                }
+                crate::todos::TodoSource::Manual => None,
+            };
+            let widget = TodoItemWidget {
+                text: todo.text.clone(),
+                completed: todo.completed,
+                is_selected,
+                source_label,
+                header: row.header.clone(),
+            };
+            let height = widget.height();
+            (widget, height)
+        });
+
+        let list = ListView::new(builder, count);
+        let mut list_state = ListState::default();
+        list_state.select(selected_pos);
+        StatefulWidget::render(list, todos_area, buf, &mut list_state);
     }
 }
 
@@ -152,11 +124,28 @@ struct TodoItemWidget {
     completed: bool,
     is_selected: bool,
     source_label: Option<String>,
+    header: Option<String>,
+}
+
+impl TodoItemWidget {
+    fn height(&self) -> u16 {
+        2 + self.header.is_some() as u16
+    }
 }
 
 impl Widget for TodoItemWidget {
     fn render(self, area: Rect, buf: &mut Buffer) {
         if area.height < 1 {
+            return;
+        }
+
+        let mut y = area.y;
+        if let Some(header) = &self.header {
+            let line = Line::from(format!(" ── {header} ──")).style(Style::default().fg(Color::DarkGray));
+            buf.set_line(area.x, y, &line, area.width);
+            y += 1;
+        }
+        if y >= area.y + area.height {
             return;
         }
 
@@ -187,17 +176,17 @@ impl Widget for TodoItemWidget {
         }
 
         let content = Line::from(spans);
-        buf.set_line(area.x, area.y, &content, area.width);
+        buf.set_line(area.x, y, &content, area.width);
+        y += 1;
 
-        // Render divider on second line
-        if area.height >= 2 {
+        if y < area.y + area.height {
             let divider_style = if self.is_selected {
                 Style::default().fg(Color::Yellow)
             } else {
                 Style::default().fg(Color::DarkGray)
             };
             let divider = Line::from("─".repeat(area.width as usize)).style(divider_style);
-            buf.set_line(area.x, area.y + 1, &divider, area.width);
+            buf.set_line(area.x, y, &divider, area.width);
         }
     }
 }

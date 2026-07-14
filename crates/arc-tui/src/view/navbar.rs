@@ -74,7 +74,8 @@ impl WidgetRef for NavBar {
         if self.loading.is_loading() && self.has_stories {
             let loading_text = format!("{} {}", self.spinner_char(), self.loading.label());
             let loading_span = Span::styled(loading_text.clone(), Style::default().gray());
-            let loading_width = loading_text.len() as u16;
+            // Char count, not byte len: the spinner glyph is 3 bytes / 1 column.
+            let loading_width = loading_text.chars().count() as u16;
 
             if inner.width > loading_width {
                 let loading_area = Rect::new(

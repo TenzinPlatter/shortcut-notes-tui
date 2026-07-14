@@ -60,8 +60,20 @@ impl<T: LinearListItem> WidgetRef for LinearList<'_, T> {
             return;
         }
 
+        // Each item is 2 rows (label + divider). Scroll so the selected item
+        // stays on screen instead of clipping off the bottom.
+        const PER_ITEM: u16 = 2;
+        let visible = (inner.height / PER_ITEM).max(1) as usize;
+        let selected_idx = self
+            .selected_id
+            .and_then(|id| self.items.iter().position(|it| it.id() == id));
+        let offset = match selected_idx {
+            Some(i) if i >= visible => i + 1 - visible,
+            _ => 0,
+        };
+
         let mut y = inner.y;
-        for item in self.items.iter() {
+        for item in self.items.iter().skip(offset) {
             if y >= inner.y + inner.height {
                 break;
             }

@@ -2,10 +2,9 @@ use std::collections::HashMap;
 
 use ratatui::{
     buffer::Buffer,
-    layout::{Alignment, Constraint, Layout, Rect},
+    layout::{Alignment, Rect},
     style::Style,
     symbols::border,
-    text::Line,
     widgets::{Block, Padding, Paragraph, StatefulWidget, Widget, WidgetRef},
 };
 use tui_widget_list::{ListBuilder, ListState, ListView};
@@ -133,88 +132,62 @@ impl<'a> WidgetRef for StoryListView<'a> {
             return;
         }
 
-        // Group stories by iteration
+        // Group stories by iteration, then flatten to one list. The first
+        // story of each group carries its section header, so a single
+        // `ListView` scrolls the whole thing and keeps the selection visible.
         let sections = group_stories_by_iteration(self.stories, self.iterations, self.state.show_finished);
 
-        // Calculate layout constraints for sections:
-        // header (1) + bordered list (items*2 + 2 for border) + spacing (1)
-        let mut constraints = Vec::new();
-        for section in &sections {
-            constraints.push(Constraint::Length(1));
-            constraints.push(Constraint::Length((section.stories.len() * 2 + 4) as u16));
-            constraints.push(Constraint::Length(1));
+        struct Row<'a> {
+            story: &'a Story,
+            header: Option<String>,
         }
-
-        if !constraints.is_empty() {
-            constraints.pop();
-        }
-        constraints.push(Constraint::Min(0));
-
-        let section_areas = Layout::vertical(constraints).split(area);
-
-        let mut area_index = 0;
+        let mut rows: Vec<Row> = Vec::new();
         for section in &sections {
-            // Render section header
-            let header_area = section_areas[area_index];
-            area_index += 1;
-
-            let header_text = if let Some(iteration) = section.iteration {
-                iteration.name.clone()
-            } else {
-                "No Iteration".to_string()
+            let header = match section.iteration {
+                Some(it) => it.name.clone(),
+                None => "No Iteration".to_string(),
             };
-
-            let header_style = Style::default().dark_gray();
-            let display = format!(" ── {} ──", header_text);
-            let title_line = Line::from(display).style(header_style);
-            buf.set_line(header_area.x, header_area.y, &title_line, header_area.width);
-
-            // Render bordered stories list
-            let list_area = section_areas[area_index];
-            area_index += 1;
-
-            let list_block = Block::bordered()
-                .border_set(border::THICK)
-                .padding(Padding::vertical(1));
-            let stories_area = list_block.inner(list_area);
-            list_block.render(list_area, buf);
-
-            let section_stories: Vec<_> = section.stories.to_vec();
-            let active_story = self.active_story;
-            let width = stories_area.width;
-
-            let builder = ListBuilder::new(move |context| {
-                let story = section_stories[context.index];
-                let is_active = match active_story {
-                    Some(active) => active.id == story.id,
-                    None => false,
-                };
-                let is_completed = story.completed;
-                let widget = StoryItemWidget::new(
+            for (i, story) in section.stories.iter().enumerate() {
+                rows.push(Row {
                     story,
-                    is_active,
-                    context.is_selected,
-                    width,
-                    is_completed,
-                );
-                let height = widget.height();
-
-                (widget, height)
-            });
-
-            let list = ListView::new(builder, section.stories.len());
-
-            let mut list_state = ListState::default();
-            if let Some(selected_id) = self.state.selected_story_id
-                && let Some(pos) = section.stories.iter().position(|s| s.id == selected_id)
-            {
-                list_state.select(Some(pos));
+                    header: (i == 0).then(|| header.clone()),
+                });
             }
-
-            StatefulWidget::render(list, stories_area, buf, &mut list_state);
-
-            // Skip spacing area
-            area_index += 1;
         }
+
+        let list_block = Block::bordered()
+            .border_set(border::THICK)
+            .padding(Padding::vertical(1));
+        let stories_area = list_block.inner(area);
+        list_block.render(area, buf);
+
+        let selected_pos = self
+            .state
+            .selected_story_id
+            .and_then(|id| rows.iter().position(|r| r.story.id == id));
+
+        let active_story = self.active_story;
+        let width = stories_area.width;
+        let count = rows.len();
+
+        let builder = ListBuilder::new(move |context| {
+            let row = &rows[context.index];
+            let is_active = active_story.is_some_and(|a| a.id == row.story.id);
+            let widget = StoryItemWidget::new(
+                row.story,
+                is_active,
+                context.is_selected,
+                width,
+                row.story.completed,
+                row.header.clone(),
+            );
+            let height = widget.height();
+            (widget, height)
+        });
+
+        let list = ListView::new(builder, count);
+        let mut list_state = ListState::default();
+        list_state.select(selected_pos);
+        StatefulWidget::render(list, stories_area, buf, &mut list_state);
     }
 }
