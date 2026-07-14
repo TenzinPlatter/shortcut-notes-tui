@@ -88,6 +88,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "arc-core",
+ "arc-notes",
  "arc-shortcut",
  "chrono",
  "clap",
@@ -129,6 +130,24 @@ dependencies = [
  "confy",
  "serde",
  "shellexpand",
+]
+
+[[package]]
+name = "arc-notes"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "arc-core",
+ "chrono",
+ "fs2",
+ "regex",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "slugify",
+ "tempfile",
+ "tokio",
+ "uuid",
 ]
 
 [[package]]

@@ -179,7 +179,7 @@ fn toggle_note_checkbox_blocking(
     let content = std::fs::read_to_string(&path)
         .with_context(|| format!("read {}", path.display()))?;
 
-    let parsed = crate::daemon::scanner::parse_note(&content, relative_file);
+    let parsed = crate::scanner::parse_note(&content, relative_file);
     let needle = normalize_for_match(todo_text);
     let target = parsed
         .iter()

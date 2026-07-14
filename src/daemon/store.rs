@@ -3,7 +3,7 @@ use std::path::Path;
 use anyhow::Result;
 use uuid::Uuid;
 
-use crate::daemon::scanner::ParsedTodo;
+use crate::scanner::ParsedTodo;
 use crate::todos::{Todo, TodoSource, modify_with_lock};
 
 /// Merge note-parsed todos for `file` into the on-disk store.

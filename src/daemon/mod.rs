@@ -12,7 +12,6 @@ use crate::daemon::watcher::WatchEvent;
 use crate::todos::TodoSource;
 
 pub mod install;
-pub mod scanner;
 pub mod scheduler;
 pub mod store;
 pub mod watcher;
@@ -90,7 +89,7 @@ async fn bootstrap_scan(notes_dir: &Path, cache_dir: &Path) -> Result<()> {
                 continue;
             }
         };
-        let parsed = scanner::parse_note(&content, &rel);
+        let parsed = crate::scanner::parse_note(&content, &rel);
         if let Err(e) = store::merge_file(cache_dir, &rel, parsed).await {
             warn!("merge {} failed: {e:#}", rel.display());
         }
@@ -158,7 +157,7 @@ async fn handle_event(
                 return Ok(());
             }
         };
-        let parsed = scanner::parse_note(&content, &rel);
+        let parsed = crate::scanner::parse_note(&content, &rel);
         let _ = store::merge_file(&config.cache_dir, &rel, parsed).await?;
     }
     rebuild_schedule(&config.cache_dir, sched).await?;

@@ -20,6 +20,7 @@ use crate::{
 use arc_core::Config;
 
 pub use arc_shortcut::{api, cache};
+pub use arc_notes::{note, scanner, todos};
 
 pub mod app;
 pub mod cli;
@@ -29,12 +30,10 @@ pub mod dummy;
 pub mod error;
 pub mod keybindings;
 pub mod migrate;
-pub mod note;
 pub mod text_utils;
 pub mod tmux;
 pub mod view;
 pub mod zellij;
-pub mod todos;
 pub mod worktree;
 #[macro_use]
 pub mod keys;
