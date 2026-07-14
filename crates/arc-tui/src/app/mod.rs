@@ -3,7 +3,7 @@ use std::io::Write;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use crossterm::ExecutableCommand;
 use crossterm::terminal::{
     EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode,
@@ -56,27 +56,7 @@ impl App {
                 let commands = self.update(msg);
 
                 for cmd in commands {
-                    match cmd {
-                        cmd::Cmd::OpenNote { .. }
-                        | cmd::Cmd::OpenIterationNote { .. }
-                        | cmd::Cmd::OpenEpicNote { .. }
-                        | cmd::Cmd::EditStoryContent { .. }
-                        | cmd::Cmd::CreateGitWorktree { .. }
-                        | cmd::Cmd::OpenDailyNote { .. }
-                        | cmd::Cmd::OpenScratchNote { .. }
-                        | cmd::Cmd::OpenTmuxSession { .. } => {
-                            self.handle_suspended_cmd(cmd, terminal).await?;
-                        }
-                        _ => {
-                            cmd::execute(
-                                cmd,
-                                self.sender.clone(),
-                                &mut self.model,
-                                &self.api_client,
-                            )
-                            .await?;
-                        }
-                    }
+                    self.execute_cmd(cmd, terminal).await?;
                 }
             }
         }
@@ -84,12 +64,129 @@ impl App {
         Ok(())
     }
 
-    async fn handle_suspended_cmd(
+    /// Single interpreter for every `Cmd`. Async/data commands run inline (some
+    /// spawn background tasks that report back via `Msg`); TUI-suspending commands
+    /// hand the terminal to an external program via `with_suspended_tui`.
+    async fn execute_cmd(
         &mut self,
         cmd: cmd::Cmd,
         terminal: &mut DefaultTerminal,
     ) -> Result<()> {
+        use crate::app::msg::Msg;
         match cmd {
+            cmd::Cmd::None => {}
+
+            cmd::Cmd::Batch(commands) => {
+                for cmd in commands {
+                    Box::pin(self.execute_cmd(cmd, terminal)).await?;
+                }
+            }
+
+            cmd::Cmd::WriteCache => {
+                self.model.cache.write().await?;
+                self.sender.send(Msg::CacheWritten).ok();
+            }
+
+            cmd::Cmd::FetchStories { iteration_ids } => {
+                let sender = self.sender.clone();
+                let api_client = self.api_client.clone();
+                let handle = tokio::spawn(async move {
+                    match api_client.get_owned_iteration_stories(iteration_ids).await {
+                        Ok(stories) => {
+                            sender
+                                .send(Msg::StoriesLoaded {
+                                    stories,
+                                    from_cache: false,
+                                })
+                                .ok();
+                        }
+                        Err(e) => {
+                            let info = ErrorInfo::new(
+                                "Failed to get stories for current iteration".to_string(),
+                                e.to_string(),
+                            );
+                            sender.send(Msg::Error(info)).ok();
+                        }
+                    }
+                });
+                self.model.data.async_handles.push(handle);
+            }
+
+            cmd::Cmd::FetchEpics => {
+                let sender = self.sender.clone();
+                let api_client = self.api_client.clone();
+                let handle = tokio::spawn(async move {
+                    match api_client.get_all_epics_slim(false).await {
+                        Ok(epics) => {
+                            sender.send(Msg::EpicsLoaded(epics)).ok();
+                        }
+                        Err(e) => {
+                            let info =
+                                ErrorInfo::new("Failed to fetch epics".to_string(), e.to_string());
+                            sender.send(Msg::Error(info)).ok();
+                        }
+                    }
+                });
+                self.model.data.async_handles.push(handle);
+            }
+
+            cmd::Cmd::SelectStory(story) => {
+                if let Some(active_story) = &self.model.data.active_story
+                    && let Some(story) = &story
+                    && active_story.id == story.id
+                {
+                    self.model.cache.active_story = None;
+                    self.model.data.active_story = None;
+                } else {
+                    self.model.data.active_story = story.clone();
+                    self.model.cache.active_story = story;
+                }
+            }
+
+            cmd::Cmd::ActionMenuVisibility(enabled) => {
+                self.model.ui.action_menu.is_showing = enabled;
+                if enabled {
+                    self.model.ui.action_menu.target_story_id =
+                        self.model.ui.story_list.selected_story_id;
+                } else {
+                    self.model.ui.action_menu.list_state.select(Some(0));
+                    self.model.ui.action_menu.target_story_id = None;
+                }
+            }
+
+            cmd::Cmd::WriteTodos => {
+                let todos_snapshot = self.model.data.todos.clone();
+                crate::todos::modify_with_lock(&self.model.config.cache_dir, move |list| {
+                    *list = todos_snapshot;
+                })
+                .await?;
+            }
+
+            cmd::Cmd::SyncNoteCheckbox {
+                file,
+                text,
+                complete,
+            } => {
+                let notes_dir = self.model.config.notes_dir.clone();
+                let sender = self.sender.clone();
+                tokio::spawn(async move {
+                    if let Err(e) =
+                        crate::todos::toggle_note_checkbox(&notes_dir, &file, &text, complete).await
+                    {
+                        let info = ErrorInfo::new(
+                            "Failed to sync todo state to note".to_string(),
+                            e.to_string(),
+                        );
+                        let _ = sender.send(Msg::Error(info));
+                    }
+                });
+            }
+
+            cmd::Cmd::OpenInBrowser { app_url } => {
+                open::that(&app_url)
+                    .with_context(|| format!("Failed to open {} in browser", app_url))?;
+            }
+
             cmd::Cmd::OpenNote {
                 story_id,
                 story_name,
@@ -203,8 +300,6 @@ impl App {
                     cmd::open_mux_session_sync(&session_name, &mux)
                 })?;
             }
-
-            _ => unreachable!("Non-suspending command passed to handle_suspended_cmd"),
         }
 
         Ok(())

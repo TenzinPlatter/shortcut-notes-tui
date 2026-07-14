@@ -61,117 +61,9 @@ impl App {
             Msg::StoriesLoaded {
                 stories,
                 from_cache,
-            } => {
-                // Only transition to Loaded on fresh API data, not cached
-                // This keeps spinner showing during background refresh
-                if !from_cache {
-                    self.model.ui.loading = LoadingState::Loaded;
-                }
+            } => self.on_stories_loaded(stories, from_cache),
 
-                // Select first story if none selected and list is non-empty
-                if self.model.ui.story_list.selected_story_id.is_none() && !stories.is_empty() {
-                    self.model.ui.story_list.selected_story_id = stories.first().map(|s| s.id);
-                }
-
-                if !from_cache
-                    && self.model.data.stories.len() == stories.len()
-                    && self
-                        .model
-                        .data
-                        .stories
-                        .iter()
-                        .zip(stories.iter())
-                        .all(|(a, b)| a.id == b.id)
-                {
-                    return vec![Cmd::None];
-                }
-
-                self.model.data.stories = stories.clone();
-
-                // Reconcile selection: if selected story no longer exists, select first
-                if let Some(selected_id) = self.model.ui.story_list.selected_story_id
-                    && !stories.iter().any(|s| s.id == selected_id)
-                {
-                    self.model.ui.story_list.selected_story_id = stories.first().map(|s| s.id);
-                }
-
-                // Reconcile description modal
-                if self.model.ui.description_modal.is_showing
-                    && let Some(ref modal_story) = self.model.ui.description_modal.story
-                {
-                    match stories.iter().find(|s| s.id == modal_story.id) {
-                        Some(fresh_story) => {
-                            // Update modal with fresh data
-                            self.model.ui.description_modal.story = Some(fresh_story.clone());
-                        }
-                        None => {
-                            // Story gone — close modal, show error
-                            self.model.ui.description_modal.is_showing = false;
-                            self.model.ui.description_modal.scroll_view_state = Default::default();
-                            self.model.ui.description_modal.story = None;
-                            self.model.ui.errors.push(ErrorInfo::new(
-                                "Story no longer available".to_string(),
-                                "The story was removed or moved out of this iteration".to_string(),
-                            ));
-                        }
-                    }
-                }
-
-                // Reconcile action menu
-                if self.model.ui.action_menu.is_showing
-                    && let Some(target_id) = self.model.ui.action_menu.target_story_id
-                    && !stories.iter().any(|s| s.id == target_id)
-                {
-                    // Story gone — close menu, show error
-                    self.model.ui.action_menu.is_showing = false;
-                    self.model.ui.action_menu.target_story_id = None;
-                    self.model.ui.errors.push(ErrorInfo::new(
-                        "Story no longer available".to_string(),
-                        "The story was removed or moved out of this iteration".to_string(),
-                    ));
-                }
-
-                // Reconcile active story
-                if let Some(ref active) = self.model.data.active_story
-                    && !stories.iter().any(|s| s.id == active.id)
-                {
-                    // Active story no longer in iteration — clear it
-                    self.model.data.active_story = None;
-                    self.model.cache.active_story = None;
-                    self.model.ui.errors.push(ErrorInfo::new(
-                        "Active story cleared".to_string(),
-                        "The active story is no longer in the current iteration".to_string(),
-                    ));
-                }
-
-                self.model.cache.iteration_stories = Some(stories);
-
-                vec![Cmd::WriteCache]
-            }
-
-            Msg::EpicsLoaded(mut epics) => {
-                epics.sort_by_key(|e| std::cmp::Reverse(e.created_at));
-
-                // Skip re-render if the ID set hasn't changed (same as StoriesLoaded)
-                if self.model.data.epics.len() == epics.len()
-                    && self
-                        .model
-                        .data
-                        .epics
-                        .iter()
-                        .zip(epics.iter())
-                        .all(|(a, b)| a.id == b.id)
-                {
-                    return vec![Cmd::None];
-                }
-
-                if self.model.ui.epic_list.selected_id.is_none() {
-                    self.model.ui.epic_list.selected_id = epics.first().map(|e| e.id);
-                }
-                self.model.data.epics = epics.clone();
-                self.model.cache.epics = epics;
-                vec![Cmd::WriteCache]
-            }
+            Msg::EpicsLoaded(epics) => self.on_epics_loaded(epics),
 
             Msg::IterationsLoaded(mut iterations) => {
                 iterations.sort_by_key(|it| std::cmp::Reverse(it.start_date));
@@ -568,4 +460,100 @@ impl App {
 
         vec![Cmd::None]
     }
+
+    /// Reconcile freshly-loaded stories against UI state (selection, open modals,
+    /// active story) and persist. Returns the follow-up commands.
+    fn on_stories_loaded(&mut self, stories: Vec<crate::api::story::Story>, from_cache: bool) -> Vec<Cmd> {
+        // Only transition to Loaded on fresh API data, not cached — this keeps the
+        // spinner showing during a background refresh.
+        if !from_cache {
+            self.model.ui.loading = LoadingState::Loaded;
+        }
+
+        if self.model.ui.story_list.selected_story_id.is_none() && !stories.is_empty() {
+            self.model.ui.story_list.selected_story_id = stories.first().map(|s| s.id);
+        }
+
+        if !from_cache && id_set_unchanged(&self.model.data.stories, &stories, |s| s.id) {
+            return vec![Cmd::None];
+        }
+
+        self.model.data.stories = stories.clone();
+
+        // Reconcile selection: if selected story no longer exists, select first.
+        if let Some(selected_id) = self.model.ui.story_list.selected_story_id
+            && !stories.iter().any(|s| s.id == selected_id)
+        {
+            self.model.ui.story_list.selected_story_id = stories.first().map(|s| s.id);
+        }
+
+        // Reconcile description modal against fresh data.
+        if self.model.ui.description_modal.is_showing
+            && let Some(ref modal_story) = self.model.ui.description_modal.story
+        {
+            match stories.iter().find(|s| s.id == modal_story.id) {
+                Some(fresh_story) => {
+                    self.model.ui.description_modal.story = Some(fresh_story.clone());
+                }
+                None => {
+                    self.model.ui.description_modal.is_showing = false;
+                    self.model.ui.description_modal.scroll_view_state = Default::default();
+                    self.model.ui.description_modal.story = None;
+                    self.model.ui.errors.push(ErrorInfo::new(
+                        "Story no longer available".to_string(),
+                        "The story was removed or moved out of this iteration".to_string(),
+                    ));
+                }
+            }
+        }
+
+        // Reconcile action menu.
+        if self.model.ui.action_menu.is_showing
+            && let Some(target_id) = self.model.ui.action_menu.target_story_id
+            && !stories.iter().any(|s| s.id == target_id)
+        {
+            self.model.ui.action_menu.is_showing = false;
+            self.model.ui.action_menu.target_story_id = None;
+            self.model.ui.errors.push(ErrorInfo::new(
+                "Story no longer available".to_string(),
+                "The story was removed or moved out of this iteration".to_string(),
+            ));
+        }
+
+        // Reconcile active story.
+        if let Some(ref active) = self.model.data.active_story
+            && !stories.iter().any(|s| s.id == active.id)
+        {
+            self.model.data.active_story = None;
+            self.model.cache.active_story = None;
+            self.model.ui.errors.push(ErrorInfo::new(
+                "Active story cleared".to_string(),
+                "The active story is no longer in the current iteration".to_string(),
+            ));
+        }
+
+        self.model.cache.iteration_stories = Some(stories);
+        vec![Cmd::WriteCache]
+    }
+
+    fn on_epics_loaded(&mut self, mut epics: Vec<crate::api::epic::EpicSlim>) -> Vec<Cmd> {
+        epics.sort_by_key(|e| std::cmp::Reverse(e.created_at));
+
+        if id_set_unchanged(&self.model.data.epics, &epics, |e| e.id) {
+            return vec![Cmd::None];
+        }
+
+        if self.model.ui.epic_list.selected_id.is_none() {
+            self.model.ui.epic_list.selected_id = epics.first().map(|e| e.id);
+        }
+        self.model.data.epics = epics.clone();
+        self.model.cache.epics = epics;
+        vec![Cmd::WriteCache]
+    }
+}
+
+/// True when both slices hold the same ids in the same order — used to skip a
+/// re-render/cache-write when a refresh returned an unchanged list.
+fn id_set_unchanged<T>(old: &[T], new: &[T], id: impl Fn(&T) -> i32) -> bool {
+    old.len() == new.len() && old.iter().zip(new).all(|(a, b)| id(a) == id(b))
 }
