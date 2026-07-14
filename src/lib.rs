@@ -15,25 +15,22 @@ use crate::{
     },
     cache::Cache,
     cli::{Commands, DaemonCommands},
-    config::Config,
     note::Note,
 };
+use arc_core::Config;
 
 pub mod api;
 pub mod app;
 pub mod cache;
 pub mod cli;
-pub mod config;
 pub mod custom_list;
 pub mod daemon;
 pub mod dummy;
 pub mod error;
 pub mod keybindings;
-pub mod macros;
 pub mod migrate;
 pub mod note;
 pub mod text_utils;
-pub mod time;
 pub mod tmux;
 pub mod view;
 pub mod zellij;

@@ -6,7 +6,7 @@ use chrono::{Datelike, Local, TimeZone};
 use tokio::sync::mpsc;
 use tracing::{error, info, warn};
 
-use crate::config::Config;
+use arc_core::config::Config;
 use crate::daemon::scheduler::{DBusNotifier, ScheduledTodo, Scheduler, SystemClock};
 use crate::daemon::watcher::WatchEvent;
 use crate::todos::TodoSource;

@@ -9,10 +9,10 @@ use crate::{
         msg::{AddTodoModalMsg, CreateNoteModalMsg, EpicListMsg, IterationListMsg, Msg},
         pane::{action_menu, add_todo_modal, create_note_modal, description_modal, epic_list, iteration_list, notes_list, story_list, todos_list},
     },
-    dbg_file,
     error::ErrorInfo,
     keybindings::Key,
 };
+use arc_core::dbg_file;
 
 impl App {
     pub fn update(
@@ -444,7 +444,7 @@ impl App {
                     return self.update(Msg::SwitchToView(prev));
                 }
                 Key::DailyNote => {
-                    let today = crate::time::today();
+                    let today = arc_core::time::today();
                     let path = self.config.notes_dir.join("daily").join(format!("{}.md", today));
                     return vec![Cmd::OpenDailyNote { path }];
                 }

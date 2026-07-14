@@ -174,7 +174,7 @@ fn prev_todo_id(current_id: Uuid, sections: &[DaySection]) -> Option<Uuid> {
 /// UI never navigates onto them.
 fn visible_sections(state: &TodosListState, todos: &[Todo]) -> Vec<DaySection> {
     let visible: Vec<Todo> = todos.iter().filter(|t| state.is_visible(t)).cloned().collect();
-    group_todos_by_section(&visible, crate::time::today()).ordered_sections()
+    group_todos_by_section(&visible, arc_core::time::today()).ordered_sections()
 }
 
 pub fn update(state: &mut TodosListState, todos: &mut Vec<Todo>, msg: TodosListMsg) -> Vec<Cmd> {

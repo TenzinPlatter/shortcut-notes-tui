@@ -5,8 +5,8 @@ use serde::{Deserialize, Serialize};
 use crate::{
     api::{ApiClient, story::Story},
     custom_list::LinearListItem,
-    dbg_file,
 };
+use arc_core::dbg_file;
 
 #[derive(Deserialize, Serialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]

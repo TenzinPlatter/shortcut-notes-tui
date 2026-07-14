@@ -5,8 +5,8 @@ use slugify::slugify;
 
 use crate::{
     app::{cmd::Cmd, model::CreateNoteModalState, msg::CreateNoteModalMsg},
-    config::Config,
 };
+use arc_core::Config;
 
 pub fn update(
     state: &mut CreateNoteModalState,

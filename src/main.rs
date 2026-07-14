@@ -2,9 +2,9 @@ use clap::Parser;
 use arc::{
     cache::Cache,
     cli::{Cli, Commands},
-    config::Config,
     worktree::check_worktree_dependencies,
 };
+use arc_core::Config;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

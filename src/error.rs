@@ -7,10 +7,8 @@ use ratatui::{
 };
 use unicode_ellipsis::truncate_str;
 
-use crate::{
-    dbg_file,
-    text_utils::{count_wrapped_lines, truncate_to_lines},
-};
+use crate::text_utils::{count_wrapped_lines, truncate_to_lines};
+use arc_core::dbg_file;
 
 const ERROR_NOTIFICATION_WINDOW_MAX_WIDTH: u16 = 50;
 const ERROR_NOTIFICATION_MAX_TEXT_HEIGHT: u16 = 3;
@@ -44,7 +42,7 @@ impl ErrorInfo {
     }
 
     pub fn is_expired(&self) -> bool {
-        crate::time::now_naive() > self.created_at + Duration::seconds(3)
+        arc_core::time::now_naive() > self.created_at + Duration::seconds(3)
     }
 
     pub fn new<A, B>(short: A, long: B) -> ErrorInfo
@@ -55,7 +53,7 @@ impl ErrorInfo {
         ErrorInfo {
             short: short.to_string(),
             long: long.to_string(),
-            created_at: crate::time::now_naive(),
+            created_at: arc_core::time::now_naive(),
         }
     }
 }

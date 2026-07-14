@@ -2,14 +2,17 @@
 name = "arc"
 version = "0.1.0"
 edition = "2024"
-description = "A TUI to manage notes with Shorcut project management integration"
+description = "A TUI to manage notes with Shortcut project management integration"
 license = "MIT"
 
 [[bin]]
 name = "arc"
 path = "src/main.rs"
 
-[dependencies]
+[workspace]
+members = ["crates/*"]
+
+[workspace.dependencies]
 anyhow = "1.0.100"
 chrono = { version = "0.4.43", features = ["serde"] }
 clap = { version = "4.5.55", features = ["derive"] }
@@ -40,6 +43,40 @@ notify-rust = "4"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 regex = "1"
+arc-core = { path = "crates/arc-core" }
+
+[dependencies]
+arc-core = { workspace = true }
+anyhow = { workspace = true }
+chrono = { workspace = true }
+clap = { workspace = true }
+confy = { workspace = true }
+crossterm = { workspace = true }
+futures = { workspace = true }
+ratatui = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+shellexpand = { workspace = true }
+textwrap = { workspace = true }
+slugify = { workspace = true }
+tokio = { workspace = true }
+uuid = { workspace = true }
+unicode-ellipsis = { workspace = true }
+tempfile = { workspace = true }
+which = { workspace = true }
+throbber-widgets-tui = { workspace = true }
+tui-scrollview = { workspace = true }
+tui-widget-list = { workspace = true }
+open = { workspace = true }
+fuzzy-matcher = { workspace = true }
+fs2 = { workspace = true }
+notify = { workspace = true }
+notify-rust = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+regex = { workspace = true }
 
 [profile.release]
 opt-level = "s"

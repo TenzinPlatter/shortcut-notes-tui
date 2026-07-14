@@ -8,9 +8,9 @@ use crate::{
         story::{Story, get_story_associated_iteration},
     },
     app::{cmd::Cmd, msg::StoryListMsg},
-    dbg_file,
     keybindings::Key,
 };
+use arc_core::dbg_file;
 
 pub use crate::app::model::StoryListState;
 

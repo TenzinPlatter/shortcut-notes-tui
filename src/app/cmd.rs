@@ -15,11 +15,10 @@ use crate::error::ErrorInfo;
 use crate::{
     api::{ApiClient, story::Story},
     app::msg::Msg,
-    config::{Config, Mux},
-    dbg_file,
     note::Note,
     zellij, tmux,
 };
+use arc_core::{Config, Mux, dbg_file};
 
 #[derive(Debug, Clone)]
 pub enum Cmd {
@@ -310,7 +309,7 @@ pub fn open_iteration_note_in_editor(
         .open(&path)?;
     let buf = read_to_string(&path)?;
     if buf.is_empty() {
-        let today = crate::time::today();
+        let today = arc_core::time::today();
         let frontmatter = format!(
             "---\niteration_id: it-{}\niteration_link: {}\niteration_name: {}\ncreated: {}\n---\n",
             iteration_id, iteration_app_url, iteration_name, today
@@ -347,7 +346,7 @@ pub fn open_epic_note_in_editor(
         .open(&path)?;
     let buf = read_to_string(&path)?;
     if buf.is_empty() {
-        let today = crate::time::today();
+        let today = arc_core::time::today();
         let frontmatter = format!(
             "---\nepic_id: ep-{}\nepic_link: {}\nepic_name: {}\ncreated: {}\n---\n",
             epic_id, epic_app_url, epic_name, today
@@ -376,7 +375,7 @@ pub fn open_daily_note_with_frontmatter(config: &Config, path: &Path) -> anyhow:
     };
 
     if needs_frontmatter {
-        let today = crate::time::today();
+        let today = arc_core::time::today();
         let frontmatter = format!("---\ncreated: {}\ntype: daily\n---\n", today);
         let mut f = File::create(path)?;
         f.write_all(frontmatter.as_bytes())?;
@@ -408,7 +407,7 @@ pub fn open_scratch_note_in_editor(name: &str, path: &Path, config: &Config) -> 
     };
 
     if needs_frontmatter {
-        let today = crate::time::today();
+        let today = arc_core::time::today();
         let frontmatter = format!(
             "---\nname: {}\ncreated: {}\ntype: scratch\n---\n",
             name, today

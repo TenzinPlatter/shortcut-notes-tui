@@ -2,7 +2,7 @@ use std::process::Output;
 
 use tokio::process::Command;
 
-use crate::dbg_file;
+use arc_core::dbg_file;
 
 fn error_on_command_fail(output: &Output) -> anyhow::Result<()> {
     if !output.status.success() {

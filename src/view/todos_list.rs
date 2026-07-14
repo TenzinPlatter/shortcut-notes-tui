@@ -13,9 +13,9 @@ use crate::{
         model::TodosListState,
         pane::todos_list::group_todos_by_section,
     },
-    time::today,
     todos::Todo,
 };
+use arc_core::time::today;
 
 pub struct TodosListView<'a> {
     todos: &'a [Todo],

@@ -37,7 +37,7 @@ pub fn update(
                 return vec![Cmd::None];
             }
             let text = state.input.clone();
-            let today = crate::time::today();
+            let today = arc_core::time::today();
             todos.push(Todo::new_manual(text, today));
             state.is_showing = false;
             state.input.clear();

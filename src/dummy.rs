@@ -1,6 +1,6 @@
 //! Dummy data for development/testing. Enable with DUMMY_DATA=1 env var.
 
-use crate::time;
+use arc_core::time;
 
 use crate::api::{
     iteration::{Iteration, IterationStatus},

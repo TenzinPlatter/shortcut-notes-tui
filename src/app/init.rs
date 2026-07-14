@@ -13,11 +13,11 @@ use crate::{
         msg::Msg,
     },
     cache::Cache,
-    config::Config,
     dummy,
     error::ErrorInfo,
     get_member_info,
 };
+use arc_core::Config;
 
 impl App {
     pub async fn init() -> Result<Self> {

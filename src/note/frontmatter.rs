@@ -60,7 +60,7 @@ impl Frontmatter {
 
             epic_link: None,
 
-            created: crate::time::today(),
+            created: arc_core::time::today(),
             note_type: NoteType::General,
             tags: Vec::new(),
             aliases: Vec::new(),

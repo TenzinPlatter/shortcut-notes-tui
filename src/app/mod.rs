@@ -24,7 +24,8 @@ use crate::view::todos_list::TodosListView;
 use crate::view::{EpicListView, IterationListView};
 use crate::view::{navbar::NavBar, notes_list::NotesListView, story_list::StoryListView};
 use crate::worktree::{create_worktree, get_repo_list, select_repo_with_fzf};
-use crate::{api::{ApiClient, story::Story}, app::model::ViewType, config::Config};
+use crate::{api::{ApiClient, story::Story}, app::model::ViewType};
+use arc_core::Config;
 
 pub mod cmd;
 pub mod init;

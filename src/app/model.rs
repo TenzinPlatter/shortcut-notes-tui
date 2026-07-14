@@ -13,10 +13,10 @@ use crate::{
     api::{epic::EpicSlim, iteration::Iteration, story::Story},
     app::pane::action_menu::ActionMenuState,
     cache::Cache,
-    config::Config,
     error::ErrorInfo,
     todos::Todo,
 };
+use arc_core::Config;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum LoadingState {

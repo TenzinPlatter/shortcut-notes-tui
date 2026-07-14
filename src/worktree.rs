@@ -9,7 +9,7 @@ use slugify::slugify;
 use tokio::process::Command as TokioCommand;
 use which::which;
 
-use crate::{config::Config, dbg_file};
+use arc_core::{Config, dbg_file};
 
 pub fn check_worktree_dependencies() -> anyhow::Result<()> {
     which("fd").context("Please make sure 'fd' is installed and in $PATH")?;
