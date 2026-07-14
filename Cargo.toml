@@ -44,10 +44,13 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 regex = "1"
 rusqlite = { version = "0.40", features = ["bundled"] }
+rmcp = { version = "2.2", features = ["server", "macros", "transport-io"] }
+schemars = "1"
 arc-core = { path = "crates/arc-core" }
 arc-shortcut = { path = "crates/arc-shortcut" }
 arc-notes = { path = "crates/arc-notes" }
 arc-index = { path = "crates/arc-index" }
+arc-mcp = { path = "crates/arc-mcp" }
 arc-daemon = { path = "crates/arc-daemon" }
 arc-tui = { path = "crates/arc-tui" }
 

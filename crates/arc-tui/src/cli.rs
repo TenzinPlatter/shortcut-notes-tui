@@ -32,6 +32,10 @@ pub enum Commands {
     /// Background daemon that parses todos out of notes.
     #[command(subcommand)]
     Daemon(DaemonCommands),
+
+    /// Read-only MCP server (stdio) exposing the notes index to LLM clients.
+    #[command()]
+    Mcp,
 }
 
 #[derive(Subcommand)]

@@ -8,6 +8,7 @@ arc-core = { workspace = true }
 arc-shortcut = { workspace = true }
 arc-notes = { workspace = true }
 arc-daemon = { workspace = true }
+arc-mcp = { workspace = true }
 anyhow = { workspace = true }
 chrono = { workspace = true }
 clap = { workspace = true }

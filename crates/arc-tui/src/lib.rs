@@ -151,6 +151,8 @@ pub async fn handle_command(
             DaemonCommands::Install => arc_daemon::install::install(),
         },
 
+        Commands::Mcp => arc_mcp::run_stdio(config).await,
+
         Commands::Migrate => unreachable!("Migrate is handled in main.rs before config is loaded"),
     }
 }
