@@ -219,14 +219,6 @@ impl TodosListState {
     }
 }
 
-impl StoryListState {
-    /// Returns the index of the selected story in the given slice, if it exists.
-    pub fn selected_index(&self, stories: &[Story]) -> Option<usize> {
-        let id = self.selected_story_id?;
-        stories.iter().position(|s| s.id == id)
-    }
-}
-
 impl DataState {
     pub fn current_iterations_ref(&self) -> Option<Vec<&Iteration>> {
         self.current_iterations.as_ref().map(|v| v.iter().collect())

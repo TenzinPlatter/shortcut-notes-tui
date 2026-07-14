@@ -1,4 +1,4 @@
-use std::{env, process::Output};
+use std::process::Output;
 
 use tokio::process::Command;
 
@@ -36,10 +36,6 @@ pub async fn session_exists(name: &str) -> anyhow::Result<bool> {
     dbg_file!("Found zellij sessions, '{}' exists: {}", name, exists);
 
     Ok(exists)
-}
-
-pub fn attached_to_session() -> bool {
-    env::var("ZELLIJ").is_ok()
 }
 
 pub async fn session_attach(name: &str) -> anyhow::Result<()> {

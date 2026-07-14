@@ -40,21 +40,4 @@ impl ApiClient {
         Ok(epics_slim)
     }
 
-    pub async fn get_owned_epics(&self) -> anyhow::Result<Vec<Epic>> {
-        let epics_slim = self.get_all_epics_slim(false).await?;
-
-        let owned_slim = epics_slim
-            .into_iter()
-            .filter(|epic| epic.owner_ids.contains(&self.user_id))
-            .collect::<Vec<_>>();
-
-        let mut epics = Vec::new();
-        for epic in owned_slim.iter().take(2) {
-            let response = self.get(&format!("epics/{}", epic.id)).await?;
-            let epic = response.json::<Epic>().await?;
-            epics.push(epic);
-        }
-
-        Ok(epics)
-    }
 }

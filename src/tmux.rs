@@ -56,12 +56,6 @@ pub async fn session_attach(name: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub async fn session_detach() -> anyhow::Result<()> {
-    let output = Command::new("tmux").arg("detach").output().await?;
-    error_on_command_fail(&output)?;
-    Ok(())
-}
-
 pub async fn session_create(name: &str) -> anyhow::Result<()> {
     let output = Command::new("tmux")
         .arg("new-session")

@@ -26,11 +26,6 @@ struct StorySearchResults {
 }
 
 impl ApiClient {
-    pub async fn get_active_owned_stories(&self) -> anyhow::Result<Vec<Story>> {
-        let query = format!("owner:{} !is:archived", self.mention_name);
-        self.search_stories_all_pages(&query).await
-    }
-
     pub(crate) async fn search_stories_all_pages(
         &self,
         query: &str,
@@ -91,9 +86,6 @@ impl Story {
         format!("scn--{}", story_slug)
     }
 
-    pub fn get_file_name(&self) -> String {
-        self.name.to_string()
-    }
 }
 
 pub fn get_story_associated_iteration<'a>(
