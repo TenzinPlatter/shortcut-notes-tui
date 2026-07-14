@@ -94,6 +94,18 @@ impl Frontmatter {
         }
     }
 
+    /// A plain note with no Shortcut linkage (created via MCP, etc.).
+    pub fn general(slug: String, tags: Vec<String>) -> Self {
+        Self {
+            id: slug,
+            created: Some(arc_core::time::today()),
+            note_type: None,
+            tags,
+            aliases: Vec::new(),
+            link: EntityLink::None,
+        }
+    }
+
     pub fn daily(slug: String) -> Self {
         Self {
             id: slug,

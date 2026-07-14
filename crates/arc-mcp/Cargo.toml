@@ -6,9 +6,16 @@ edition = "2024"
 [dependencies]
 arc-core = { workspace = true }
 arc-index = { workspace = true }
+arc-notes = { workspace = true }
 anyhow = { workspace = true }
+chrono = { workspace = true }
 rmcp = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+slugify = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

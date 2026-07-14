@@ -56,6 +56,9 @@ pub fn open(cache_dir: &Path) -> Result<Connection> {
     let conn = Connection::open(db_path(cache_dir))
         .with_context(|| format!("open index at {}", db_path(cache_dir).display()))?;
     conn.pragma_update(None, "journal_mode", "WAL")?;
+    // Daemon and the MCP writer can both hold writer connections; wait rather
+    // than fail on the brief windows where they contend.
+    conn.busy_timeout(std::time::Duration::from_secs(5))?;
     conn.execute_batch(SCHEMA)?;
     Ok(conn)
 }
@@ -195,6 +198,15 @@ pub fn query(conn: &Connection, sql: &str) -> Result<String> {
         out.push(serde_json::Value::Object(obj));
     }
     Ok(serde_json::to_string(&out)?)
+}
+
+/// Notes-dir-relative path of a note by its Obsidian `id`.
+pub fn note_path(conn: &Connection, id: &str) -> Result<Option<String>> {
+    Ok(conn
+        .query_row("SELECT path FROM notes WHERE id = ?1 LIMIT 1", [id], |r| {
+            r.get(0)
+        })
+        .ok())
 }
 
 /// Full markdown body of a note by its Obsidian `id` (frontmatter id / slug).

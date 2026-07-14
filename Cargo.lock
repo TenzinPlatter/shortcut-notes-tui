@@ -145,11 +145,16 @@ dependencies = [
  "anyhow",
  "arc-core",
  "arc-index",
+ "arc-notes",
+ "chrono",
  "rmcp",
  "serde",
  "serde_json",
+ "slugify",
+ "tempfile",
  "tokio",
  "tracing",
+ "uuid",
 ]
 
 [[package]]
