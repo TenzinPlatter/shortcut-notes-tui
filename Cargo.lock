@@ -146,6 +146,7 @@ dependencies = [
  "arc-core",
  "arc-index",
  "arc-notes",
+ "arc-shortcut",
  "chrono",
  "rmcp",
  "serde",

@@ -73,6 +73,14 @@ impl ArcMcp {
             notes_dir,
         }
     }
+     
+    #[tool(description = "List the stories in the current iterations as a JSON array of objects.")]
+    async fn active_stories(&self) -> Result<CallToolResult, ErrorData> {
+        let cache = arc_shortcut::cache::Cache::read(self.cache_dir.clone()).await;
+        let stories = cache.iteration_stories.unwrap_or_default();
+        let json = serde_json::to_string(&stories).map_err(internal)?;
+        Ok(CallToolResult::success(vec![ContentBlock::text(json)]))
+    }
 
     #[tool(
         description = "Run a read-only SQL query against the notes index and return rows as a JSON array of objects. Tables: notes(path, id, title, created, type, link_kind['story'|'iteration'|'epic'|null], entity_id, entity_url, entity_name, iteration_url, epic_url); note_tags(path, tag); todos(id, text, date, completed, source['manual'|'note'], file, line, position). Only SELECT/WITH/EXPLAIN/PRAGMA are permitted."
