@@ -146,6 +146,18 @@ pub async fn handle_command(
             }
         }
 
+        Commands::Active { id } => {
+            let mut cache = cache;
+            let story = cache
+                .iteration_stories
+                .as_ref()
+                .and_then(|stories| stories.iter().find(|s| s.id == id).cloned())
+                .with_context(|| format!("No story with id {id} in the current iteration"))?;
+            cache.active_story = Some(story);
+            cache.write().await?;
+            Ok(())
+        }
+
         Commands::Daemon(daemon_cmd) => match daemon_cmd {
             DaemonCommands::Run => arc_daemon::run(config.clone()).await,
             DaemonCommands::Install => arc_daemon::install::install(),

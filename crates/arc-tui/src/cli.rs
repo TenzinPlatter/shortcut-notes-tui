@@ -25,6 +25,10 @@ pub enum Commands {
     #[command()]
     Cat,
 
+    /// Set the active story by its Shortcut id (must be in the current iteration).
+    #[command(alias = "a")]
+    Active { id: i32 },
+
     /// Migrate config, cache, and notes directories from the old `shortcut-notes` name to `arc`.
     #[command()]
     Migrate,
