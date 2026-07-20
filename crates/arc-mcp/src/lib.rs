@@ -51,6 +51,14 @@ struct CreateNoteArgs {
 }
 
 #[derive(Deserialize, JsonSchema)]
+struct CreateStoryNoteArgs {
+    /// Shortcut story id (from `active_stories`). The note is linked to this story.
+    story_id: i32,
+    /// Markdown body placed under the heading.
+    body: String,
+}
+
+#[derive(Deserialize, JsonSchema)]
 struct AddTodoArgs {
     /// Todo text.
     text: String,
@@ -157,6 +165,40 @@ impl ArcMcp {
     }
 
     #[tool(
+        description = "Create a note linked to a Shortcut story (found by its story id — see `active_stories`). The note lives under `stories/`, its slug/title come from the story name, and it carries the story link so it shows up against that story. Errors if the story's note already exists — use `append_note` to add to it."
+    )]
+    async fn create_story_note(
+        &self,
+        Parameters(CreateStoryNoteArgs { story_id, body }): Parameters<CreateStoryNoteArgs>,
+    ) -> Result<CallToolResult, ErrorData> {
+        let cache = arc_shortcut::cache::Cache::read(self.cache_dir.clone()).await;
+        let story = cache
+            .iteration_stories
+            .as_ref()
+            .into_iter()
+            .flatten()
+            .chain(cache.active_story.as_ref())
+            .find(|s| s.id == story_id)
+            .ok_or_else(|| invalid(format!("no story with id {story_id} in the cache")))?
+            .clone();
+        let iteration_url = cache
+            .current_iterations_ref()
+            .and_then(|its| {
+                arc_shortcut::api::story::get_story_associated_iteration(story.iteration_id, its)
+            })
+            .map(|it| it.app_url.clone());
+
+        let (cache_dir, notes_dir) = (self.cache_dir.clone(), self.notes_dir.clone());
+        let id = tokio::task::spawn_blocking(move || {
+            create_story_note(&cache_dir, &notes_dir, &story, iteration_url, &body)
+        })
+        .await
+        .map_err(internal)?
+        .map_err(invalid)?;
+        Ok(CallToolResult::success(vec![ContentBlock::text(id)]))
+    }
+
+    #[tool(
         description = "Add a manual todo. Shows up in the arc TUI and is indexed for querying. Optional due date as YYYY-MM-DD."
     )]
     async fn add_todo(
@@ -249,6 +291,41 @@ fn create_note(
     Ok(slug)
 }
 
+/// Create a story-linked note under `stories/` + index row; returns its id (slug).
+fn create_story_note(
+    cache_dir: &Path,
+    notes_dir: &Path,
+    story: &arc_shortcut::api::story::Story,
+    iteration_url: Option<String>,
+    body: &str,
+) -> Result<String> {
+    let slug = slugify!(&story.name);
+    if slug.is_empty() {
+        bail!("story name produced an empty slug");
+    }
+    let rel = format!("stories/{slug}.md");
+    let abs = notes_dir.join(&rel);
+    if abs.exists() {
+        bail!("note '{slug}' already exists; use append_note");
+    }
+    let fm = Frontmatter::story(
+        slug.clone(),
+        story.id,
+        story.name.clone(),
+        story.app_url.clone(),
+        iteration_url,
+    );
+    let mut content = fm.to_block()?;
+    content.push_str(&format!("\n# {}\n\n{}\n", story.name, body));
+    if let Some(p) = abs.parent() {
+        std::fs::create_dir_all(p)?;
+    }
+    std::fs::write(&abs, &content)?;
+    let conn = arc_index::open(cache_dir)?;
+    arc_index::reindex_note(&conn, Path::new(&rel), &content)?;
+    Ok(slug)
+}
+
 #[tool_handler]
 impl ServerHandler for ArcMcp {
     fn get_info(&self) -> ServerInfo {
@@ -257,7 +334,8 @@ impl ServerHandler for ArcMcp {
         info.instructions = Some(
             "The arc notes vault as a database. Read: `query` (read-only SQL over notes, \
              tags, todos) and `get_note` (full Markdown by id). Write: `append_note` to add \
-             context to a note, `create_note` for a new note, `add_todo` for a todo."
+             context to a note, `create_note` for a new note, `create_story_note` for a \
+             note linked to a Shortcut story, `add_todo` for a todo."
                 .into(),
         );
         info
