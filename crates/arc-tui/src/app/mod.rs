@@ -479,12 +479,25 @@ where
     // Stop the key-reader thread from consuming input while the external program
     // owns the terminal.
     key_reader_paused.store(true, Ordering::SeqCst);
+    // The reader may already be inside a 100ms `poll`, holding crossterm's global
+    // reader lock. Wait it out so it isn't racing us across the raw-mode toggle.
+    std::thread::sleep(std::time::Duration::from_millis(120));
     std::io::stdout().execute(LeaveAlternateScreen)?;
     disable_raw_mode()?;
     let result = f();
     std::io::stdout().execute(EnterAlternateScreen)?;
     enable_raw_mode()?;
     terminal.clear()?;
+    // Drop anything the external program left in the input buffer — otherwise
+    // keys typed inside the editor get replayed as TUI keybinds (an `e` there
+    // reopens the editor forever).
+    // ponytail: 50ms window is plenty for buffered bytes, and bounds the loop —
+    // a tty at EOF makes crossterm report "ready" forever without yielding an event.
+    let deadline = std::time::Instant::now() + std::time::Duration::from_millis(50);
+    while std::time::Instant::now() < deadline
+        && crossterm::event::poll(std::time::Duration::ZERO).unwrap_or(false)
+        && crossterm::event::read().is_ok()
+    {}
     key_reader_paused.store(false, Ordering::SeqCst);
     result
 }
